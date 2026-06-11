@@ -251,22 +251,7 @@ a:after {
 </style>
 
 <body>
-    <!-- HEADER -->
-    <div class="modal fade" id="devModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-danger text-white">
-          <div class="modal-header bg-dark">
-            <h5 class="modal-title ">Atención</h5>
-          </div>
-          <div class="modal-body">
-            <strong>Este es un Servidor de Desarrollo. Los datos no son oficiales, son simplemente de prueba.
-            Por favor dirigirse a <a href="http://www.isft38.edu.ar">
-             www.isft38.edu.ar</a> 
-             . Gracias!</strong>
-          </div>
-        </div>
-      </div>
-    </div>
+   
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
