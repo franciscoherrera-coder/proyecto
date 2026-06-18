@@ -15,5 +15,5 @@ Route::group(['middleware' => ['director']], function () {
 
 });
 
-Route::get('/profesores/login', [ProfesorController::class, 'login']);
+Route::get('/profesores/login', [ProfesorController::class, 'login'])->name('profesores.login');
 

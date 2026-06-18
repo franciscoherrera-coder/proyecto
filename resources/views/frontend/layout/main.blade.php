@@ -296,7 +296,16 @@ a:after {
               </svg>
               Horarios
             </a>
-          </li>          
+          </li>
+          <li class="nav-item">
+            <a href="{{ route('asistencia.index') }}" class="nav-link border-effect">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-qrcode" viewBox="0 0 16 16">
+                <path d="M2 2h4v4H2V2zm1 1v2h2V3H3zm7-1h4v4h-4V2zm1 1v2h2V3h-2zM2 9h4v4H2V9zm1 1v2h2v-2H3zm7-1h4v4h-4V8zm1 1v2h2v-2h-2z"/>
+                <path d="M8 8h1v1H8V8zm2 0h1v1h-1V8zm-2 2h1v1H8V10zm2 0h1v1h-1V10z"/>
+              </svg>
+              Asistencia
+            </a>
+          </li>
           <!--   <li class="nav-item dropdown">
             <a class="nav-link " href="#" id="navbarScrollingDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-badge-fill" viewBox="0 0 16 16">

@@ -66,5 +66,9 @@ class Materia extends Model
         return $this->belongsToMany(Materia::class, 'correlativas', 'materia_id', 'correlativa_id');
     }
 
+    public function alumnos()
+    {
+        return $this->belongsToMany(Registro::class, 'materia_registro', 'materia_id', 'registro_id')->withTimestamps();
+    }
 
 }

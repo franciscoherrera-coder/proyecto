@@ -34,6 +34,9 @@ Route::middleware('auth') // guard por defecto: web
     //Inicio-> Iván, Martín
     Route::group([], __DIR__ . '/inicio.php');
 
+    //Asistencia
+    Route::group([], __DIR__ . '/asistencia.php');
+
     //Carrera-> Iván, Martín
     Route::group([], __DIR__ . '/carrera.php');
 
