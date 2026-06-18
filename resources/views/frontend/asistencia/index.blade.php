@@ -3,6 +3,7 @@
 @section('content')
 @php
     $rolActivo = request()->query('rol', 'alumno');
+    $adminTabActivo = request()->query('admin_tab', 'usuarios');
     $cantidadAsignaciones = 0;
     if ($tieneTablaAsignaciones ?? false) {
         foreach (($materias ?? collect()) as $materia) {
@@ -290,6 +291,74 @@
         white-space: nowrap;
     }
 
+    .admin-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 22px;
+    }
+
+    .admin-nav-button {
+        background: #f8fafc;
+        border: 1px solid #d9e2ec;
+        border-radius: 8px;
+        color: #243b53;
+        font-weight: 900;
+        padding: 10px 14px;
+        text-transform: uppercase;
+    }
+
+    .admin-nav-button.active {
+        background: #700101;
+        border-color: #700101;
+        color: #ffffff;
+    }
+
+    .admin-tab-panel {
+        display: none;
+    }
+
+    .admin-tab-panel.active {
+        display: block;
+    }
+
+    .filter-grid {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr 0.7fr auto;
+        gap: 12px;
+        margin-bottom: 16px;
+    }
+
+    .editable-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    .edit-stack {
+        display: grid;
+        gap: 14px;
+        max-height: 620px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .edit-item {
+        border: 1px solid #e4e7eb;
+        border-radius: 8px;
+        padding: 16px;
+    }
+
+    .edit-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .edit-form-grid .wide {
+        grid-column: 1 / -1;
+    }
+
     .autocomplete-field {
         position: relative;
     }
@@ -361,6 +430,11 @@
         .work-grid {
             grid-template-columns: 1fr;
         }
+
+        .filter-grid,
+        .editable-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     @media (max-width: 768px) {
@@ -387,6 +461,10 @@
 
         .asistencia-btn {
             width: 100%;
+        }
+
+        .edit-form-grid {
+            grid-template-columns: 1fr;
         }
     }
 </style>
@@ -603,6 +681,12 @@
                         </div>
                     @endif
 
+                    <div class="admin-nav" role="tablist" aria-label="Secciones de administracion">
+                        <button class="admin-nav-button {{ $adminTabActivo === 'usuarios' ? 'active' : '' }}" type="button" data-admin-tab="usuarios">Usuarios</button>
+                        <button class="admin-nav-button {{ $adminTabActivo === 'carreras' ? 'active' : '' }}" type="button" data-admin-tab="carreras">Carreras y materias</button>
+                    </div>
+
+                    <div id="admin-tab-usuarios" class="admin-tab-panel {{ $adminTabActivo === 'usuarios' ? 'active' : '' }}">
                     <div class="metric-grid">
                         <div class="metric">
                             <small>Materias</small>
@@ -675,6 +759,33 @@
 
                     <div class="tool-panel mt-4">
                         <h3>Materias configuradas</h3>
+                        <div class="filter-grid">
+                            <div>
+                                <label for="filtro_materia_configurada" class="form-label">Buscar materia</label>
+                                <input id="filtro_materia_configurada" class="form-control" type="text" placeholder="Buscar por materia, profesor, alumno o carrera">
+                            </div>
+                            <div>
+                                <label for="filtro_carrera_configurada" class="form-label">Carrera</label>
+                                <select id="filtro_carrera_configurada" class="form-select">
+                                    <option value="">Todas</option>
+                                    @foreach (($carreras ?? collect()) as $carrera)
+                                        <option value="{{ $carrera->id }}">{{ $carrera->descripcion }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label for="filtro_anio_configurado" class="form-label">Año</label>
+                                <select id="filtro_anio_configurado" class="form-select">
+                                    <option value="">Todos</option>
+                                    @foreach (($anios ?? collect()) as $anio)
+                                        <option value="{{ $anio->id }}">{{ $anio->descripcion ?? $anio->anio }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="d-flex align-items-end">
+                                <button id="limpiar_filtros_configurados" class="asistencia-btn secondary" type="button">Limpiar</button>
+                            </div>
+                        </div>
                         <div class="table-responsive">
                             <table class="table align-middle">
                                 <thead>
@@ -687,7 +798,24 @@
                                 </thead>
                                 <tbody>
                                     @forelse (($materias ?? collect()) as $materia)
-                                        <tr>
+                                        @php
+                                            $alumnosTextoFiltro = '';
+                                            if ($tieneTablaAsignaciones ?? false) {
+                                                foreach ($materia->alumnos as $alumnoFiltro) {
+                                                    $alumnosTextoFiltro .= ' ' . $alumnoFiltro->apellido . ' ' . $alumnoFiltro->nombre . ' ' . $alumnoFiltro->dni;
+                                                }
+                                            }
+                                            $textoFiltroMateria = $materia->descripcion . ' ' .
+                                                ($materia->deCarrera->descripcion ?? '') . ' ' .
+                                                ($materia->deAnio->descripcion ?? '') . ' ' .
+                                                ($materia->deAnio->anio ?? '') . ' ' .
+                                                ($materia->deProfesor ? $materia->deProfesor->apellido . ' ' . $materia->deProfesor->nombre : '') . ' ' .
+                                                $alumnosTextoFiltro;
+                                        @endphp
+                                        <tr class="js-materia-configurada d-none"
+                                            data-search="{{ $textoFiltroMateria }}"
+                                            data-carrera-id="{{ $materia->carrera_id }}"
+                                            data-anio-id="{{ $materia->anio_id }}">
                                             <td>
                                                 <strong>{{ $materia->descripcion }}</strong>
                                                 <div class="row-subtitle">
@@ -733,8 +861,119 @@
                                             <td colspan="4" class="text-center text-muted">Todavia no hay materias cargadas.</td>
                                         </tr>
                                     @endforelse
+                                    <tr id="materias_configuradas_vacio">
+                                        <td colspan="4" class="text-center text-muted">Usa el buscador o elegi carrera y año para ver materias.</td>
+                                    </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                    </div>
+
+                    <div id="admin-tab-carreras" class="admin-tab-panel {{ $adminTabActivo === 'carreras' ? 'active' : '' }}">
+                        <div class="editable-grid">
+                            <div class="tool-panel">
+                                <h3>Editar carreras</h3>
+                                <div class="edit-stack">
+                                    @forelse (($carreras ?? collect()) as $carrera)
+                                        <form class="edit-item" action="{{ route('asistencia.admin.carreras.actualizar', $carrera) }}" method="POST">
+                                            @csrf
+                                            @method('PUT')
+                                            <div class="edit-form-grid">
+                                                <div class="wide">
+                                                    <label class="form-label" for="carrera_descripcion_{{ $carrera->id }}">Nombre</label>
+                                                    <input id="carrera_descripcion_{{ $carrera->id }}" class="form-control" name="descripcion" value="{{ $carrera->descripcion }}" required>
+                                                </div>
+                                                <div>
+                                                    <label class="form-label" for="carrera_anios_{{ $carrera->id }}">Años</label>
+                                                    <input id="carrera_anios_{{ $carrera->id }}" class="form-control" name="anios" type="number" min="1" value="{{ $carrera->anios }}">
+                                                </div>
+                                                <div>
+                                                    <label class="form-label" for="carrera_resolucion_{{ $carrera->id }}">Resolución</label>
+                                                    <input id="carrera_resolucion_{{ $carrera->id }}" class="form-control" name="resolucion" value="{{ $carrera->resolucion }}">
+                                                </div>
+                                                <div class="wide">
+                                                    <label class="form-label" for="carrera_carpeta_{{ $carrera->id }}">Carpeta</label>
+                                                    <input id="carrera_carpeta_{{ $carrera->id }}" class="form-control" name="nombre_carpeta" value="{{ $carrera->nombre_carpeta }}">
+                                                </div>
+                                                <div class="wide">
+                                                    <label class="form-label" for="carrera_texto_{{ $carrera->id }}">Descripción</label>
+                                                    <textarea id="carrera_texto_{{ $carrera->id }}" class="form-control" name="texto" rows="3">{{ $carrera->texto }}</textarea>
+                                                </div>
+                                            </div>
+                                            <button class="asistencia-btn mt-3" type="submit">Guardar carrera</button>
+                                        </form>
+                                    @empty
+                                        <p class="text-muted mb-0">Todavía no hay carreras cargadas.</p>
+                                    @endforelse
+                                </div>
+                            </div>
+
+                            <div class="tool-panel">
+                                <h3>Editar materias</h3>
+                                <div class="filter-grid" style="grid-template-columns: 1fr;">
+                                    <div>
+                                        <label for="filtro_editar_materia" class="form-label">Buscar materia</label>
+                                        <input id="filtro_editar_materia" class="form-control" type="text" placeholder="Buscar por materia, carrera, año o profesor">
+                                    </div>
+                                </div>
+                                <div class="edit-stack">
+                                    @forelse (($materias ?? collect()) as $materia)
+                                        @php
+                                            $textoEditarMateria = $materia->descripcion . ' ' .
+                                                ($materia->deCarrera->descripcion ?? '') . ' ' .
+                                                ($materia->deAnio->descripcion ?? '') . ' ' .
+                                                ($materia->deAnio->anio ?? '') . ' ' .
+                                                ($materia->deProfesor ? $materia->deProfesor->apellido . ' ' . $materia->deProfesor->nombre : '');
+                                        @endphp
+                                        <form class="edit-item js-editar-materia d-none" data-search="{{ $textoEditarMateria }}" action="{{ route('asistencia.admin.materias.actualizar', $materia) }}" method="POST">
+                                            @csrf
+                                            @method('PUT')
+                                            <div class="edit-form-grid">
+                                                <div class="wide">
+                                                    <label class="form-label" for="materia_descripcion_{{ $materia->id }}">Materia</label>
+                                                    <input id="materia_descripcion_{{ $materia->id }}" class="form-control" name="descripcion" value="{{ $materia->descripcion }}" required>
+                                                </div>
+                                                <div>
+                                                    <label class="form-label" for="materia_carrera_{{ $materia->id }}">Carrera</label>
+                                                    <select id="materia_carrera_{{ $materia->id }}" class="form-select" name="carrera_id">
+                                                        <option value="">Sin carrera</option>
+                                                        @foreach (($carreras ?? collect()) as $carrera)
+                                                            <option value="{{ $carrera->id }}" {{ $materia->carrera_id == $carrera->id ? 'selected' : '' }}>{{ $carrera->descripcion }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="form-label" for="materia_anio_{{ $materia->id }}">Año</label>
+                                                    <select id="materia_anio_{{ $materia->id }}" class="form-select" name="anio_id">
+                                                        <option value="">Sin año</option>
+                                                        @foreach (($anios ?? collect()) as $anio)
+                                                            <option value="{{ $anio->id }}" {{ $materia->anio_id == $anio->id ? 'selected' : '' }}>{{ $anio->descripcion ?? $anio->anio }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="form-label" for="materia_profesor_edit_{{ $materia->id }}">Profesor</label>
+                                                    <select id="materia_profesor_edit_{{ $materia->id }}" class="form-select" name="profesor_id">
+                                                        <option value="">Sin profesor</option>
+                                                        @foreach (($profesores ?? collect()) as $profesor)
+                                                            <option value="{{ $profesor->id }}" {{ $materia->profesor_id == $profesor->id ? 'selected' : '' }}>{{ $profesor->apellido }}, {{ $profesor->nombre }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label class="form-label" for="materia_orden_{{ $materia->id }}">Orden</label>
+                                                    <input id="materia_orden_{{ $materia->id }}" class="form-control" name="orden" type="number" min="0" value="{{ $materia->orden }}">
+                                                </div>
+                                            </div>
+                                            <button class="asistencia-btn mt-3" type="submit">Guardar materia</button>
+                                        </form>
+                                    @empty
+                                        <p class="text-muted mb-0">Todavía no hay materias cargadas.</p>
+                                    @endforelse
+                                    <p id="editar_materias_vacio" class="text-muted mb-0">Busca una materia para editarla.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -748,6 +987,17 @@
         const roleButtons = document.querySelectorAll('.role-button');
         const panels = document.querySelectorAll('.dashboard-panel');
         const searchInputs = document.querySelectorAll('.js-buscador');
+        const adminTabButtons = document.querySelectorAll('.admin-nav-button');
+        const adminTabPanels = document.querySelectorAll('.admin-tab-panel');
+        const configuredSearch = document.getElementById('filtro_materia_configurada');
+        const configuredCareer = document.getElementById('filtro_carrera_configurada');
+        const configuredYear = document.getElementById('filtro_anio_configurado');
+        const configuredClear = document.getElementById('limpiar_filtros_configurados');
+        const configuredRows = document.querySelectorAll('.js-materia-configurada');
+        const configuredEmpty = document.getElementById('materias_configuradas_vacio');
+        const editMatterSearch = document.getElementById('filtro_editar_materia');
+        const editMatterForms = document.querySelectorAll('.js-editar-materia');
+        const editMatterEmpty = document.getElementById('editar_materias_vacio');
         const autocompleteSources = {
             materias: [
                 @foreach (($materias ?? collect()) as $materia)
@@ -811,6 +1061,102 @@
                 document.getElementById('panel-' + role).classList.add('active');
             });
         });
+
+        adminTabButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                const tab = button.dataset.adminTab;
+
+                adminTabButtons.forEach(function (item) {
+                    item.classList.remove('active');
+                });
+
+                adminTabPanels.forEach(function (panel) {
+                    panel.classList.remove('active');
+                });
+
+                button.classList.add('active');
+                document.getElementById('admin-tab-' + tab).classList.add('active');
+            });
+        });
+
+        function filterConfiguredSubjects() {
+            if (!configuredRows.length) {
+                return;
+            }
+
+            const query = normalizeText(configuredSearch ? configuredSearch.value : '');
+            const careerId = configuredCareer ? configuredCareer.value : '';
+            const yearId = configuredYear ? configuredYear.value : '';
+            const hasFilter = query || careerId || yearId;
+            let visibleRows = 0;
+
+            configuredRows.forEach(function (row) {
+                const matchesText = !query || normalizeText(row.dataset.search || '').includes(query);
+                const matchesCareer = !careerId || row.dataset.carreraId === careerId;
+                const matchesYear = !yearId || row.dataset.anioId === yearId;
+                const visible = hasFilter && matchesText && matchesCareer && matchesYear;
+
+                row.classList.toggle('d-none', !visible);
+                if (visible) {
+                    visibleRows++;
+                }
+            });
+
+            if (configuredEmpty) {
+                configuredEmpty.classList.toggle('d-none', visibleRows > 0);
+                configuredEmpty.querySelector('td').textContent = hasFilter
+                    ? 'No se encontraron materias con esos filtros.'
+                    : 'Usa el buscador o elegi carrera y año para ver materias.';
+            }
+        }
+
+        if (configuredSearch) {
+            configuredSearch.addEventListener('input', filterConfiguredSubjects);
+        }
+        if (configuredCareer) {
+            configuredCareer.addEventListener('change', filterConfiguredSubjects);
+        }
+        if (configuredYear) {
+            configuredYear.addEventListener('change', filterConfiguredSubjects);
+        }
+        if (configuredClear) {
+            configuredClear.addEventListener('click', function () {
+                configuredSearch.value = '';
+                configuredCareer.value = '';
+                configuredYear.value = '';
+                filterConfiguredSubjects();
+            });
+        }
+        filterConfiguredSubjects();
+
+        function filterEditableSubjects() {
+            if (!editMatterForms.length) {
+                return;
+            }
+
+            const query = normalizeText(editMatterSearch ? editMatterSearch.value : '');
+            let visibleForms = 0;
+
+            editMatterForms.forEach(function (form) {
+                const visible = query && normalizeText(form.dataset.search || '').includes(query);
+                form.classList.toggle('d-none', !visible);
+                if (visible) {
+                    visibleForms++;
+                }
+            });
+
+            if (editMatterEmpty) {
+                editMatterEmpty.classList.toggle('d-none', visibleForms > 0);
+                editMatterEmpty.textContent = query
+                    ? 'No se encontraron materias para editar.'
+                    : 'Busca una materia para editarla.';
+            }
+        }
+
+        if (editMatterSearch) {
+            editMatterSearch.addEventListener('input', filterEditableSubjects);
+        }
+        filterEditableSubjects();
 
         searchInputs.forEach(function (input) {
             const hiddenInput = document.getElementById(input.dataset.hiddenTarget);
