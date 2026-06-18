@@ -290,6 +290,54 @@
         white-space: nowrap;
     }
 
+    .autocomplete-field {
+        position: relative;
+    }
+
+    .autocomplete-results {
+        background: #ffffff;
+        border: 1px solid #d9e2ec;
+        border-radius: 8px;
+        box-shadow: 0 14px 30px rgba(31, 41, 51, 0.14);
+        display: none;
+        left: 0;
+        max-height: 230px;
+        overflow-y: auto;
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        z-index: 20;
+    }
+
+    .autocomplete-results.active {
+        display: block;
+    }
+
+    .autocomplete-option {
+        background: #ffffff;
+        border: 0;
+        border-bottom: 1px solid #edf2f7;
+        color: #243b53;
+        display: block;
+        font-weight: 700;
+        padding: 10px 12px;
+        text-align: left;
+        width: 100%;
+    }
+
+    .autocomplete-option:hover,
+    .autocomplete-option:focus {
+        background: #fce8e6;
+        color: #700101;
+        outline: none;
+    }
+
+    .autocomplete-empty {
+        color: #627d98;
+        font-weight: 700;
+        padding: 10px 12px;
+    }
+
     .table-responsive {
         border: 1px solid #e4e7eb;
         border-radius: 8px;
@@ -581,26 +629,20 @@
                                 @csrf
                                 <div class="mb-3">
                                     <label for="materia_profesor" class="form-label">Materia</label>
-                                    <select id="materia_profesor" name="materia_id" class="form-select" required>
-                                        <option value="">Seleccionar materia</option>
-                                        @foreach (($materias ?? collect()) as $materia)
-                                            <option value="{{ $materia->id }}">
-                                                {{ $materia->descripcion }}
-                                                @if ($materia->deCarrera)
-                                                    - {{ $materia->deCarrera->descripcion }}
-                                                @endif
-                                            </option>
-                                        @endforeach
-                                    </select>
+                                    <div class="autocomplete-field">
+                                        <input id="materia_profesor" class="form-control js-buscador" type="text" placeholder="Buscar por materia, carrera o anio" autocomplete="off" data-hidden-target="materia_profesor_id" data-source="materias" required>
+                                        <input id="materia_profesor_id" type="hidden" name="materia_id">
+                                        <div class="autocomplete-results" data-results-for="materia_profesor"></div>
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="profesor_materia" class="form-label">Profesor</label>
-                                    <select id="profesor_materia" name="profesor_id" class="form-select">
-                                        <option value="">Sin profesor asignado</option>
-                                        @foreach (($profesores ?? collect()) as $profesor)
-                                            <option value="{{ $profesor->id }}">{{ $profesor->apellido }}, {{ $profesor->nombre }}</option>
-                                        @endforeach
-                                    </select>
+                                    <div class="autocomplete-field">
+                                        <input id="profesor_materia" class="form-control js-buscador" type="text" placeholder="Buscar profesor por nombre o apellido" autocomplete="off" data-hidden-target="profesor_materia_id" data-source="profesores">
+                                        <input id="profesor_materia_id" type="hidden" name="profesor_id">
+                                        <div class="autocomplete-results" data-results-for="profesor_materia"></div>
+                                    </div>
+                                    <div class="form-text">Dejalo vacio para quitar el profesor de la materia.</div>
                                 </div>
                                 <button class="asistencia-btn" type="submit">Guardar profesor</button>
                             </form>
@@ -612,26 +654,19 @@
                                 @csrf
                                 <div class="mb-3">
                                     <label for="materia_alumno" class="form-label">Materia</label>
-                                    <select id="materia_alumno" name="materia_id" class="form-select" required>
-                                        <option value="">Seleccionar materia</option>
-                                        @foreach (($materias ?? collect()) as $materia)
-                                            <option value="{{ $materia->id }}">
-                                                {{ $materia->descripcion }}
-                                                @if ($materia->deCarrera)
-                                                    - {{ $materia->deCarrera->descripcion }}
-                                                @endif
-                                            </option>
-                                        @endforeach
-                                    </select>
+                                    <div class="autocomplete-field">
+                                        <input id="materia_alumno" class="form-control js-buscador" type="text" placeholder="Buscar por materia, carrera o anio" autocomplete="off" data-hidden-target="materia_alumno_id" data-source="materias" required>
+                                        <input id="materia_alumno_id" type="hidden" name="materia_id">
+                                        <div class="autocomplete-results" data-results-for="materia_alumno"></div>
+                                    </div>
                                 </div>
                                 <div class="mb-3">
                                     <label for="registro_alumno" class="form-label">Alumno</label>
-                                    <select id="registro_alumno" name="registro_id" class="form-select" required>
-                                        <option value="">Seleccionar alumno</option>
-                                        @foreach (($alumnos ?? collect()) as $alumno)
-                                            <option value="{{ $alumno->id }}">{{ $alumno->apellido }}, {{ $alumno->nombre }} - DNI {{ $alumno->dni }}</option>
-                                        @endforeach
-                                    </select>
+                                    <div class="autocomplete-field">
+                                        <input id="registro_alumno" class="form-control js-buscador" type="text" placeholder="Buscar alumno por nombre, apellido o DNI" autocomplete="off" data-hidden-target="registro_alumno_id" data-source="alumnos" required>
+                                        <input id="registro_alumno_id" type="hidden" name="registro_id">
+                                        <div class="autocomplete-results" data-results-for="registro_alumno"></div>
+                                    </div>
                                 </div>
                                 <button class="asistencia-btn" type="submit" {{ !($tieneTablaAsignaciones ?? false) ? 'disabled' : '' }}>Asignar alumno</button>
                             </form>
@@ -712,6 +747,51 @@
     document.addEventListener('DOMContentLoaded', function () {
         const roleButtons = document.querySelectorAll('.role-button');
         const panels = document.querySelectorAll('.dashboard-panel');
+        const searchInputs = document.querySelectorAll('.js-buscador');
+        const autocompleteSources = {
+            materias: [
+                @foreach (($materias ?? collect()) as $materia)
+                    {
+                        id: '{{ $materia->id }}',
+                        label: @json($materia->descripcion . ($materia->deCarrera ? ' - ' . $materia->deCarrera->descripcion : '') . ($materia->deAnio ? ' - ' . ($materia->deAnio->anio ?? $materia->deAnio->descripcion) : ''))
+                    },
+                @endforeach
+            ],
+            profesores: [
+                @foreach (($profesores ?? collect()) as $profesor)
+                    {
+                        id: '{{ $profesor->id }}',
+                        label: @json($profesor->apellido . ', ' . $profesor->nombre)
+                    },
+                @endforeach
+            ],
+            alumnos: [
+                @foreach (($alumnos ?? collect()) as $alumno)
+                    {
+                        id: '{{ $alumno->id }}',
+                        label: @json($alumno->apellido . ', ' . $alumno->nombre . ' - DNI ' . $alumno->dni)
+                    },
+                @endforeach
+            ]
+        };
+
+        function normalizeText(value) {
+            return value
+                .toString()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .trim();
+        }
+
+        function closeAllResults(exceptInputId) {
+            document.querySelectorAll('.autocomplete-results').forEach(function (resultsBox) {
+                if (resultsBox.dataset.resultsFor !== exceptInputId) {
+                    resultsBox.classList.remove('active');
+                    resultsBox.innerHTML = '';
+                }
+            });
+        }
 
         roleButtons.forEach(function (button) {
             button.addEventListener('click', function () {
@@ -729,6 +809,107 @@
                 button.classList.add('active');
                 button.setAttribute('aria-selected', 'true');
                 document.getElementById('panel-' + role).classList.add('active');
+            });
+        });
+
+        searchInputs.forEach(function (input) {
+            const hiddenInput = document.getElementById(input.dataset.hiddenTarget);
+            const resultsBox = document.querySelector('[data-results-for="' + input.id + '"]');
+            const source = autocompleteSources[input.dataset.source] || [];
+
+            function syncHiddenValue() {
+                const normalizedInput = normalizeText(input.value);
+                const selectedItem = source.find(function (item) {
+                    return normalizeText(item.label) === normalizedInput;
+                });
+
+                hiddenInput.value = selectedItem ? selectedItem.id : '';
+            }
+
+            function selectItem(item) {
+                input.value = item.label;
+                hiddenInput.value = item.id;
+                input.setCustomValidity('');
+                resultsBox.classList.remove('active');
+                resultsBox.innerHTML = '';
+            }
+
+            function renderResults() {
+                const query = normalizeText(input.value);
+                hiddenInput.value = '';
+                closeAllResults(input.id);
+
+                if (!query) {
+                    resultsBox.classList.remove('active');
+                    resultsBox.innerHTML = '';
+                    return;
+                }
+
+                const matches = source.filter(function (item) {
+                    return normalizeText(item.label).includes(query);
+                }).slice(0, 8);
+
+                if (!matches.length) {
+                    resultsBox.innerHTML = '<div class="autocomplete-empty">Sin resultados</div>';
+                    resultsBox.classList.add('active');
+                    return;
+                }
+
+                resultsBox.innerHTML = '';
+                matches.forEach(function (item) {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'autocomplete-option';
+                    button.textContent = item.label;
+                    button.addEventListener('mousedown', function (event) {
+                        event.preventDefault();
+                        selectItem(item);
+                    });
+                    resultsBox.appendChild(button);
+                });
+                resultsBox.classList.add('active');
+                syncHiddenValue();
+            }
+
+            input.addEventListener('input', renderResults);
+            input.addEventListener('focus', renderResults);
+            input.addEventListener('change', syncHiddenValue);
+            input.addEventListener('blur', function () {
+                setTimeout(function () {
+                    resultsBox.classList.remove('active');
+                }, 120);
+            });
+        });
+
+        document.querySelectorAll('#panel-admin form').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                const formSearches = form.querySelectorAll('.js-buscador');
+                let valid = true;
+
+                formSearches.forEach(function (input) {
+                    const hiddenInput = document.getElementById(input.dataset.hiddenTarget);
+                    const needsSelection = input.hasAttribute('required') || input.value.trim() !== '';
+                    const source = autocompleteSources[input.dataset.source] || [];
+                    const exactMatch = source.find(function (item) {
+                        return normalizeText(item.label) === normalizeText(input.value);
+                    });
+
+                    if (exactMatch) {
+                        hiddenInput.value = exactMatch.id;
+                    }
+
+                    if (needsSelection && !hiddenInput.value) {
+                        input.setCustomValidity('Selecciona una opcion de la lista.');
+                        input.reportValidity();
+                        valid = false;
+                    } else {
+                        input.setCustomValidity('');
+                    }
+                });
+
+                if (!valid) {
+                    event.preventDefault();
+                }
             });
         });
     });
