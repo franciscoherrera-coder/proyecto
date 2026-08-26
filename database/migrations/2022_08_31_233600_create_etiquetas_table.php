@@ -3,7 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-class CreateEtiquetasTable extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -11,6 +11,10 @@ class CreateEtiquetasTable extends Migration
      * @return void
      */
     public function up(){
+        if (Schema::hasTable('etiquetas')) {
+            return;
+        }
+
         Schema::create('etiquetas', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 255);
@@ -49,4 +53,4 @@ class CreateEtiquetasTable extends Migration
         Schema::dropIfExists('noticias_etiquetas');
         Schema::dropIfExists('etiquetas');
     }
-}
+};

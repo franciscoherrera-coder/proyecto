@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateCarrerasTable extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -13,6 +13,10 @@ class CreateCarrerasTable extends Migration
      */
     public function up()
     {
+        if (Schema::hasTable('carreras')) {
+            return;
+        }
+
         Schema::create('carreras', function (Blueprint $table) {
             $table->id();
             $table->string('descripcion');
@@ -32,6 +36,10 @@ class CreateCarrerasTable extends Migration
      */
     public function down()
     {
+        if (!Schema::hasTable('carreras')) {
+            return;
+        }
+
         Schema::dropIfExists('carreras');
     }
-}
+};

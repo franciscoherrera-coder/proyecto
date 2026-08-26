@@ -71,4 +71,9 @@ class Materia extends Model
         return $this->belongsToMany(Registro::class, 'materia_registro', 'materia_id', 'registro_id')->withTimestamps();
     }
 
+    public function asistenciasDiarias()
+    {
+        return $this->hasMany(AsistenciaDiaria::class);
+    }
+
 }

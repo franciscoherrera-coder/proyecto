@@ -46,4 +46,9 @@ class User extends Authenticatable
     public function noticias(){
         return $this->hasMany(Noticia::class, 'autor');
     }
+
+    public function alumnoRegistro()
+    {
+        return $this->hasOne(Registro::class, 'dni', 'dni');
+    }
 }

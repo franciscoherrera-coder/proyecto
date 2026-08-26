@@ -165,6 +165,11 @@
         margin-bottom: 22px;
     }
 
+    #panel-admin .metric-grid,
+    #panel-admin #admin-tab-alumnos {
+        display: none;
+    }
+
     .metric {
         background: #f8fafc;
         border: 1px solid #e4e7eb;
@@ -223,9 +228,50 @@
         border-bottom: 0;
     }
 
+    .materia-alumno-compacta {
+        align-items: center;
+        border-bottom: 1px solid #edf2f7;
+        color: #243b53;
+        display: flex;
+        gap: 8px;
+        justify-content: space-between;
+        min-height: 40px;
+        padding: 6px 8px;
+    }
+
+    .materia-alumno-compacta:hover {
+        background: #f8fafc;
+    }
+
+    .materia-alumno-compacta:last-child {
+        border-bottom: 0;
+    }
+
+    .materia-alumno-compacta .row-subtitle {
+        display: inline;
+        font-size: 0.78rem;
+        margin-left: 8px;
+    }
+
+    .materia-alumno-compacta .badge-soft {
+        flex: 0 0 auto;
+        font-size: 0.68rem;
+        padding: 4px 8px;
+    }
+
     .row-title {
         color: #243b53;
         font-weight: 800;
+    }
+
+    .profesor-materia-link,
+    .profesor-materia-link strong {
+        color: #243b53;
+    }
+
+    .profesor-materia-link:hover,
+    .profesor-materia-link:hover strong {
+        color: #700101;
     }
 
     .row-subtitle {
@@ -618,7 +664,7 @@
 
 <main class="asistencia-page">
     <div class="container">
-        @unless (auth()->check() && $rolActivo === 'admin')
+        @unless (auth()->check() && in_array($rolActivo, ['admin', 'profesor'], true))
         <section class="asistencia-hero">
             <div class="asistencia-kicker">{{ auth()->check() ? 'Panel validado' : 'Acceso requerido' }}</div>
             <h1 class="asistencia-title">Sistema de asistencia</h1>
@@ -641,10 +687,6 @@
             @endauth
         </section>
         @endunless
-
-        @if (session('status'))
-            <div class="alert alert-success mt-4">{{ session('status') }}</div>
-        @endif
 
         @if ($errors->any())
             <div class="alert alert-danger mt-4">
@@ -731,8 +773,8 @@
                             @csrf
                             <h2>Iniciá sesión</h2>
                             <div class="mb-3">
-                                <label class="form-label" for="login_email">Correo electrónico</label>
-                                <input id="login_email" class="form-control" type="email" name="email" value="{{ old('email') }}" autocomplete="email" required>
+                                <label class="form-label" for="login_identificador">DNI o correo electrónico</label>
+                                <input id="login_identificador" class="form-control" name="identificador" value="{{ old('identificador') }}" autocomplete="username" inputmode="numeric" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label" for="login_password">Contraseña</label>
@@ -750,6 +792,42 @@
         @else
 
         @if ($rolActivo === 'alumno')
+        <section id="panel-alumno" class="dashboard-panel active" role="tabpanel">
+            <div class="dashboard-shell">
+                <div class="dashboard-header">
+                    <div>
+                        <h2>Mis materias</h2>
+                        <p>Estas son las materias en las que tu profesor te validó.</p>
+                    </div>
+                    <span class="status-pill">{{ ($materiasAlumno ?? collect())->count() }} materia(s)</span>
+                </div>
+                <div class="dashboard-body">
+                    @if (!($tieneTablaAsignaciones ?? false))
+                        <div class="alert alert-warning mb-0">Las asignaciones de materias todavía no están disponibles.</div>
+                    @elseif (($materiasAlumno ?? collect())->isEmpty())
+                        <div class="tool-panel"><p class="text-muted mb-0">Todavía no tenés materias validadas por un profesor.</p></div>
+                    @else
+                        <div class="edit-stack">
+                            @foreach (($materiasAlumno ?? collect())->groupBy('carrera_id') as $materiasCarrera)
+                                <div class="tool-panel">
+                                    <h3>{{ $materiasCarrera->first()->deCarrera->descripcion ?? 'Sin carrera' }}</h3>
+                                    @foreach ($materiasCarrera as $materiaAlumno)
+                                        <a class="materia-alumno-compacta text-decoration-none" href="{{ route('asistencia.alumno.materia', $materiaAlumno) }}">
+                                            <span class="text-truncate">
+                                                <span class="row-title">{{ $materiaAlumno->descripcion }}</span>
+                                                <span class="row-subtitle">{{ $materiaAlumno->deAnio->anio ?? $materiaAlumno->deAnio->descripcion ?? 'Sin año' }} · {{ $materiaAlumno->horario && $materiaAlumno->horario->profesor ? $materiaAlumno->horario->profesor->apellido . ', ' . $materiaAlumno->horario->profesor->nombre : 'Profesor no informado' }}</span>
+                                            </span>
+                                            <span class="badge-soft">Ver materia</span>
+                                        </a>
+                                    @endforeach
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </section>
+        @if (false)
         <section id="panel-alumno" class="dashboard-panel active" role="tabpanel">
             <div class="dashboard-shell">
                 <div class="dashboard-header">
@@ -817,6 +895,7 @@
             </div>
         </section>
         @endif
+        @endif
 
         @if ($rolActivo === 'profesor')
         <section id="panel-profesor" class="dashboard-panel active" role="tabpanel">
@@ -848,12 +927,6 @@
                             @foreach (($materiasProfesor ?? collect())->groupBy('carrera_id') as $materiasCarrera)
                                 @php
                                     $carreraPanel = $materiasCarrera->first()->deCarrera ?? null;
-                                    $cantidadAlumnosCarrera = 0;
-                                    if ($tieneTablaAsignaciones ?? false) {
-                                        foreach ($materiasCarrera as $materiaContador) {
-                                            $cantidadAlumnosCarrera += $materiaContador->alumnos->count();
-                                        }
-                                    }
                                 @endphp
                                 <details class="tool-panel">
                                     <summary class="d-flex align-items-center justify-content-between gap-2">
@@ -861,7 +934,6 @@
                                             <h3 class="mb-1">{{ $carreraPanel->descripcion ?? 'Sin carrera' }}</h3>
                                             <p class="row-subtitle mb-0">{{ $materiasCarrera->count() }} materia(s) asignada(s)</p>
                                         </div>
-                                        <span class="badge-soft">{{ $cantidadAlumnosCarrera }} alumno(s)</span>
                                     </summary>
 
                                     <div class="edit-stack mt-3" style="gap: 8px; max-height: none;">
@@ -869,7 +941,7 @@
                                             <details class="edit-item">
                                                 <summary class="d-flex align-items-center justify-content-between gap-2">
                                                     <span>
-                                                        <strong>{{ $materiaProfesor->descripcion }}</strong>
+                                                        <a class="profesor-materia-link text-decoration-none" href="{{ route('asistencia.profesor.materia', $materiaProfesor) }}"><strong>{{ $materiaProfesor->descripcion }}</strong></a>
                                                         <span class="row-subtitle ms-2">
                                                             @if ($materiaProfesor->deAnio)
                                                                 {{ $materiaProfesor->deAnio->anio ?? $materiaProfesor->deAnio->descripcion }}
@@ -882,23 +954,7 @@
                                                 </summary>
 
                                                 <div class="mt-3">
-                                                    @if ($tieneTablaAsignaciones ?? false)
-                                                        <form action="{{ route('asistencia.profesor.alumnos') }}" method="POST">
-                                                            @csrf
-                                                            <input type="hidden" name="materia_id" value="{{ $materiaProfesor->id }}">
-                                                            <label class="form-label" for="profesor_alumnos_{{ $materiaProfesor->id }}">Agregar alumnos</label>
-                                                            <select id="profesor_alumnos_{{ $materiaProfesor->id }}" class="form-select" name="registro_ids[]" multiple size="7" required>
-                                                                @foreach (($alumnos ?? collect()) as $alumno)
-                                                                    <option value="{{ $alumno->id }}">{{ $alumno->apellido }}, {{ $alumno->nombre }} - DNI {{ $alumno->dni }}</option>
-                                                                @endforeach
-                                                            </select>
-                                                            <button class="asistencia-btn mt-3" type="submit">Agregar seleccionados</button>
-                                                        </form>
-                                                    @else
-                                                        <div class="alert alert-warning mb-0">No se pueden agregar alumnos hasta ejecutar la migración de asignaciones.</div>
-                                                    @endif
-
-                                                    <div class="mt-3">
+                                                    <div>
                                                         <div class="row-title mb-2">Alumnos en {{ $materiaProfesor->descripcion }}</div>
                                                         @if ($tieneTablaAsignaciones ?? false)
                                                             @forelse ($materiaProfesor->alumnos as $alumnoMateria)
@@ -946,10 +1002,6 @@
                 </div>
 
                 <div class="dashboard-body">
-                    @if (session('status'))
-                        <div class="alert alert-success">{{ session('status') }}</div>
-                    @endif
-
                     @if ($errors->any())
                         <div class="alert alert-danger">
                             <strong>Revisa los datos:</strong>
@@ -981,6 +1033,99 @@
                             <small>Asignaciones</small>
                             <strong>{{ $cantidadAsignaciones }}</strong>
                         </div>
+                    </div>
+
+                    <div id="admin-tab-alumnos" class="tool-panel mb-4">
+                        <h3>ABM de alumnos por carrera</h3>
+                        <p class="row-subtitle">Cada alumno se registra con una carrera y su acceso queda vinculado mediante el DNI.</p>
+
+                        <details class="mb-3">
+                            <summary class="asistencia-btn d-inline-block">Crear alumno</summary>
+                            <form class="edit-item mt-3" action="{{ route('asistencia.admin.alumnos.crear') }}" method="POST">
+                                @csrf
+                                <div class="edit-form-grid">
+                                    <div>
+                                        <label class="form-label" for="alumno_nuevo_nombre">Nombre</label>
+                                        <input id="alumno_nuevo_nombre" class="form-control" name="nombre" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" for="alumno_nuevo_apellido">Apellido</label>
+                                        <input id="alumno_nuevo_apellido" class="form-control" name="apellido" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" for="alumno_nuevo_dni">DNI</label>
+                                        <input id="alumno_nuevo_dni" class="form-control" type="number" name="dni" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" for="alumno_nuevo_cuil">CUIL</label>
+                                        <input id="alumno_nuevo_cuil" class="form-control" type="number" name="cuil" required>
+                                    </div>
+                                    <div class="wide">
+                                        <label class="form-label" for="alumno_nuevo_email">Correo electrónico</label>
+                                        <input id="alumno_nuevo_email" class="form-control" type="email" name="email" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" for="alumno_nuevo_carrera">Carrera</label>
+                                        <select id="alumno_nuevo_carrera" class="form-select" name="carrera_id" required>
+                                            <option value="">Seleccionar carrera</option>
+                                            @foreach (($carrerasAdministrables ?? collect()) as $carrera)
+                                                <option value="{{ $carrera->id }}">{{ $carrera->descripcion }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" for="alumno_nuevo_password">Contraseña de acceso</label>
+                                        <input id="alumno_nuevo_password" class="form-control" type="password" name="password" required>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" for="alumno_nuevo_password_confirmation">Confirmar contraseña</label>
+                                        <input id="alumno_nuevo_password_confirmation" class="form-control" type="password" name="password_confirmation" required>
+                                    </div>
+                                </div>
+                                <button class="asistencia-btn mt-3" type="submit">Guardar alumno</button>
+                            </form>
+                        </details>
+
+                        @forelse (($alumnosPorCarrera ?? collect())->groupBy('carrera_id') as $alumnosCarrera)
+                            <details class="edit-item mb-2">
+                                <summary>
+                                    <strong>{{ $alumnosCarrera->first()->carrera->descripcion ?? 'Sin carrera' }}</strong>
+                                    <span class="row-subtitle ms-2">{{ $alumnosCarrera->count() }} alumno(s)</span>
+                                </summary>
+                                <div class="edit-stack mt-3">
+                                    @foreach ($alumnosCarrera as $alumno)
+                                        <details class="border rounded p-2">
+                                            <summary>
+                                                <strong>{{ $alumno->apellido }}, {{ $alumno->nombre }}</strong>
+                                                <span class="row-subtitle ms-2">DNI {{ $alumno->dni }}</span>
+                                            </summary>
+                                            <form class="mt-3" action="{{ route('asistencia.admin.alumnos.actualizar', $alumno) }}" method="POST">
+                                                @csrf
+                                                @method('PUT')
+                                                <div class="edit-form-grid">
+                                                    <div><label class="form-label">Nombre<input class="form-control" name="nombre" value="{{ $alumno->nombre }}" required></label></div>
+                                                    <div><label class="form-label">Apellido<input class="form-control" name="apellido" value="{{ $alumno->apellido }}" required></label></div>
+                                                    <div><label class="form-label">DNI<input class="form-control" type="number" name="dni" value="{{ $alumno->dni }}" required></label></div>
+                                                    <div><label class="form-label">CUIL<input class="form-control" type="number" name="cuil" value="{{ $alumno->cuil }}" required></label></div>
+                                                    <div class="wide"><label class="form-label">Correo electrónico<input class="form-control" type="email" name="email" value="{{ $alumno->email }}" required></label></div>
+                                                    <div><label class="form-label">Carrera<select class="form-select" name="carrera_id" required>@foreach (($carrerasAdministrables ?? collect()) as $carrera)<option value="{{ $carrera->id }}" {{ $alumno->carrera_id == $carrera->id ? 'selected' : '' }}>{{ $carrera->descripcion }}</option>@endforeach</select></label></div>
+                                                    <div><label class="form-label">Nueva contraseña <small class="text-muted">(opcional)</small><input class="form-control" type="password" name="password"></label></div>
+                                                    <div><label class="form-label">Confirmar contraseña<input class="form-control" type="password" name="password_confirmation"></label></div>
+                                                </div>
+                                                <button class="asistencia-btn mt-3" type="submit">Actualizar alumno</button>
+                                            </form>
+                                            <form class="mt-2" action="{{ route('asistencia.admin.alumnos.eliminar', $alumno) }}" method="POST">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar alumno y acceso</button>
+                                            </form>
+                                        </details>
+                                    @endforeach
+                                </div>
+                            </details>
+                        @empty
+                            <p class="text-muted mb-0">Todavía no hay alumnos registrados en las carreras administrables.</p>
+                        @endforelse
                     </div>
 
                     @if ($adminPuedeCrearAdmins ?? false)
@@ -1232,15 +1377,17 @@
                                 <label for="filtro_materia_configurada" class="form-label">Buscar materia</label>
                                 <input id="filtro_materia_configurada" class="form-control" type="text" placeholder="Buscar por materia, profesor, alumno o carrera">
                             </div>
-                            <div>
-                                <label for="filtro_carrera_configurada" class="form-label">Carrera</label>
-                                <select id="filtro_carrera_configurada" class="form-select">
-                                    <option value="">Todas</option>
-                                    @foreach (($carreras ?? collect()) as $carrera)
-                                        <option value="{{ $carrera->id }}">{{ $carrera->descripcion }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
+                            @if (($carrerasAdministrables ?? collect())->count() > 1)
+                                <div>
+                                    <label for="filtro_carrera_configurada" class="form-label">Carrera</label>
+                                    <select id="filtro_carrera_configurada" class="form-select">
+                                        <option value="">Todas</option>
+                                        @foreach (($carrerasAdministrables ?? collect()) as $carrera)
+                                            <option value="{{ $carrera->id }}">{{ $carrera->descripcion }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endif
                             <div>
                                 <label for="filtro_anio_configurado" class="form-label">Año</label>
                                 <select id="filtro_anio_configurado" class="form-select">
@@ -1260,12 +1407,12 @@
                                     <tr>
                                         <th>Materia</th>
                                         <th>Profesor</th>
-                                        <th>Alumnos asignados</th>
+                                        <th>Listado de alumnos</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @forelse (($materias ?? collect()) as $materia)
+                                    @forelse (($materias ?? collect())->whereIn('id', $materiasAdministrablesIds ?? collect()) as $materia)
                                         @php
                                             $alumnosTextoFiltro = '';
                                             if ($tieneTablaAsignaciones ?? false) {
@@ -1285,7 +1432,7 @@
                                             data-carrera-id="{{ $materia->carrera_id }}"
                                             data-anio-id="{{ $materia->anio_id }}">
                                             <td>
-                                                <strong>{{ $materia->descripcion }}</strong>
+                                                <button class="btn btn-link p-0 fw-bold text-start js-mostrar-alumnos-materia" type="button" data-listado-alumnos="listado-alumnos-materia-{{ $materia->id }}">{{ $materia->descripcion }}</button>
                                                 <div class="row-subtitle">
                                                     {{ $materia->deCarrera->descripcion ?? 'Sin carrera' }}
                                                     @if ($materia->deAnio)
@@ -1300,7 +1447,7 @@
                                                     <span class="text-muted">Sin profesor</span>
                                                 @endif
                                             </td>
-                                            <td>
+                                            <td class="d-none">
                                                 @if ($tieneTablaAsignaciones ?? false)
                                                     @forelse ($materia->alumnos as $alumno)
                                                         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
@@ -1322,6 +1469,43 @@
                                             </td>
                                             <td>
                                                 <span class="badge-soft">{{ ($tieneTablaAsignaciones ?? false) ? $materia->alumnos->count() : 0 }} alumno(s)</span>
+                                            </td>
+                                        </tr>
+                                        <tr id="listado-alumnos-materia-{{ $materia->id }}" class="d-none js-listado-alumnos-materia">
+                                            <td colspan="4" class="bg-light p-3">
+                                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                                    <strong>Planilla de alumnos: {{ $materia->descripcion }}</strong>
+                                                    <span class="badge-soft">{{ ($tieneTablaAsignaciones ?? false) ? $materia->alumnos->count() : 0 }} alumno(s)</span>
+                                                </div>
+                                                @if ($tieneTablaAsignaciones ?? false)
+                                                    <div class="table-responsive bg-white border rounded">
+                                                        <table class="table table-sm align-middle mb-0">
+                                                            <thead><tr><th>Apellido y nombre</th><th>DNI</th><th>Correo electrónico</th><th></th></tr></thead>
+                                                            <tbody>
+                                                                @forelse ($materia->alumnos as $alumno)
+                                                                    <tr>
+                                                                        <td>{{ $alumno->apellido }}, {{ $alumno->nombre }}</td>
+                                                                        <td>{{ $alumno->dni }}</td>
+                                                                        <td>{{ $alumno->email }}</td>
+                                                                        <td>
+                                                                            <form action="{{ route('asistencia.admin.alumno.quitar') }}" method="POST" class="m-0">
+                                                                                @csrf
+                                                                                @method('DELETE')
+                                                                                <input type="hidden" name="materia_id" value="{{ $materia->id }}">
+                                                                                <input type="hidden" name="registro_id" value="{{ $alumno->id }}">
+                                                                                <button class="btn btn-sm btn-outline-danger" type="submit">Quitar</button>
+                                                                            </form>
+                                                                        </td>
+                                                                    </tr>
+                                                                @empty
+                                                                    <tr><td colspan="4" class="text-center text-muted">Sin alumnos asignados.</td></tr>
+                                                                @endforelse
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                @else
+                                                    <span class="text-muted">Pendiente de migración.</span>
+                                                @endif
                                             </td>
                                         </tr>
                                     @empty
@@ -1353,17 +1537,19 @@
                                     </div>
                                     <div class="asistencia-modal-body">
                                         <div class="filter-grid" style="grid-template-columns: 1fr 1fr;">
-                                            <div>
-                                                <label class="form-label" for="modal_carrera_{{ $usuarioProfesor->id }}">Carrera</label>
-                                                <select id="modal_carrera_{{ $usuarioProfesor->id }}" class="form-select js-modal-carrera">
-                                                    @if ($adminPuedeCrearAdmins ?? false)
-                                                        <option value="">Todas</option>
-                                                    @endif
-                                                    @foreach (($carrerasAdministrables ?? collect()) as $carrera)
-                                                        <option value="{{ $carrera->id }}" {{ !($adminPuedeCrearAdmins ?? false) ? 'selected' : '' }}>{{ $carrera->descripcion }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
+                                            @if (($carrerasAdministrables ?? collect())->count() > 1)
+                                                <div>
+                                                    <label class="form-label" for="modal_carrera_{{ $usuarioProfesor->id }}">Carrera</label>
+                                                    <select id="modal_carrera_{{ $usuarioProfesor->id }}" class="form-select js-modal-carrera">
+                                                        @if ($adminPuedeCrearAdmins ?? false)
+                                                            <option value="">Todas</option>
+                                                        @endif
+                                                        @foreach (($carrerasAdministrables ?? collect()) as $carrera)
+                                                            <option value="{{ $carrera->id }}" {{ !($adminPuedeCrearAdmins ?? false) ? 'selected' : '' }}>{{ $carrera->descripcion }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </div>
+                                            @endif
                                             <div>
                                                 <label class="form-label" for="modal_anio_{{ $usuarioProfesor->id }}">Año</label>
                                                 <select id="modal_anio_{{ $usuarioProfesor->id }}" class="form-select js-modal-anio">
@@ -1848,6 +2034,21 @@
             });
         }
         filterConfiguredSubjects();
+
+        document.querySelectorAll('.js-mostrar-alumnos-materia').forEach(function (button) {
+            button.addEventListener('click', function () {
+                const listado = document.getElementById(button.dataset.listadoAlumnos);
+                if (!listado) {
+                    return;
+                }
+
+                const estabaAbierto = !listado.classList.contains('d-none');
+                document.querySelectorAll('.js-listado-alumnos-materia').forEach(function (fila) {
+                    fila.classList.add('d-none');
+                });
+                listado.classList.toggle('d-none', estabaAbierto);
+            });
+        });
 
         function filterEditableSubjects() {
             if (!editMatterForms.length) {

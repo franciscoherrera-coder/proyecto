@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateNoticiasTable extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -13,6 +13,10 @@ class CreateNoticiasTable extends Migration
      */
     public function up()
     {
+  if (Schema::hasTable('noticias')) {
+            return;
+        }
+
   Schema::create('noticias', function (Blueprint $table) {
             $table->id();
             $table->string('titulo', 255);
@@ -44,4 +48,4 @@ class CreateNoticiasTable extends Migration
     {
         Schema::dropIfExists('noticias');
     }
-}
+};

@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateNoticiasFiles extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -13,6 +13,10 @@ class CreateNoticiasFiles extends Migration
      */
     public function up()
     {
+        if (!Schema::hasTable('noticias') || Schema::hasColumn('noticias', 'archivo1')) {
+            return;
+        }
+
         Schema::table('noticias', function (Blueprint $table) {
             $table->string('archivo1',255)->nullable();
             $table->string('archivo2',255)->nullable();
@@ -32,4 +36,4 @@ class CreateNoticiasFiles extends Migration
         Schema::dropColumn('noticias.archivo3');*/
 
     }
-}
+};
