@@ -144,6 +144,35 @@
         margin: 4px 0 0;
     }
 
+    .dashboard-header-actions {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .dashboard-header-actions .asistencia-btn.secondary {
+        background: #e4e7eb;
+        border-color: #e4e7eb;
+        color: #243b53;
+    }
+
+    .career-choice-list {
+        display: grid;
+        gap: 8px;
+    }
+
+    .career-choice {
+        cursor: pointer;
+        padding: 10px 12px;
+    }
+
+    .career-choice:has(input:checked) {
+        background: #fce8e6;
+        border-color: #700101;
+    }
+
     .status-pill {
         background: #e3f9e5;
         border-radius: 999px;
@@ -259,6 +288,58 @@
         padding: 4px 8px;
     }
 
+    .alertas-asistencia {
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 12px 14px;
+    }
+
+    .alertas-asistencia .alert-heading {
+        font-size: 1rem;
+        margin-bottom: 2px;
+    }
+
+    .tabla-alertas-asistencia {
+        color: inherit;
+        margin: 0;
+        table-layout: auto;
+        width: 100%;
+    }
+
+    .tabla-alertas-asistencia tr,
+    .tabla-alertas-asistencia td {
+        height: auto !important;
+        min-height: 0 !important;
+    }
+
+    .tabla-alertas-asistencia td {
+        border-top: 1px solid rgba(132, 32, 41, .2);
+        font-size: .82rem;
+        line-height: 1.25;
+        padding: 5px 4px;
+        vertical-align: middle;
+    }
+
+    .tabla-alertas-asistencia td:first-child {
+        padding-left: 0;
+    }
+
+    .tabla-alertas-asistencia td:last-child {
+        padding-right: 0;
+        text-align: right;
+        white-space: nowrap;
+        width: 1%;
+    }
+
+    .tabla-alertas-asistencia .btn {
+        padding: 3px 8px;
+        white-space: nowrap;
+    }
+
+    .materia-alumno-acciones { align-items: center; display: flex; flex: 0 0 auto; gap: 6px; }
+    .boton-escanear-qr { border-radius: 999px; font-size: .68rem; padding: 4px 9px; }
+    #lector_qr_alumno { margin: 0 auto; max-width: 460px; width: 100%; }
+
     .row-title {
         color: #243b53;
         font-weight: 800;
@@ -367,26 +448,6 @@
 
     .admin-tab-panel.active {
         display: block;
-    }
-
-    .admin-create-details summary {
-        transition: opacity 0.2s ease, transform 0.2s ease;
-    }
-
-    .admin-create-body {
-        display: grid;
-        grid-template-rows: 0fr;
-        overflow: hidden;
-        transition: grid-template-rows 0.28s ease;
-    }
-
-    .admin-create-details[open] .admin-create-body {
-        grid-template-rows: 1fr;
-    }
-
-    .admin-create-body > div {
-        min-height: 0;
-        padding-top: 12px;
     }
 
     .filter-grid {
@@ -514,6 +575,61 @@
         border-top: 1px solid #e4e7eb;
     }
 
+    .sustitucion-modal {
+        align-items: center;
+        background: rgba(17, 24, 39, 0.72);
+        display: none;
+        inset: 0;
+        justify-content: center;
+        padding: 18px;
+        position: fixed;
+        z-index: 1100;
+    }
+
+    .sustitucion-modal.active {
+        display: flex;
+    }
+
+    .sustitucion-modal-dialog {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 28px 70px rgba(17, 24, 39, 0.35);
+        max-width: 620px;
+        overflow: hidden;
+        width: 100%;
+    }
+
+    .sustitucion-modal-icon {
+        align-items: center;
+        background: #fff3cd;
+        border-radius: 50%;
+        color: #856404;
+        display: inline-flex;
+        flex: 0 0 42px;
+        font-size: 1.35rem;
+        font-weight: 800;
+        height: 42px;
+        justify-content: center;
+    }
+
+    .sustitucion-lista {
+        display: grid;
+        gap: 8px;
+        list-style: none;
+        margin: 16px 0 0;
+        max-height: 280px;
+        overflow-y: auto;
+        padding: 0;
+    }
+
+    .sustitucion-lista li {
+        background: #fff8e1;
+        border: 1px solid #ffe08a;
+        border-radius: 8px;
+        color: #5f4700;
+        padding: 10px 12px;
+    }
+
     .materia-check-row {
         align-items: center;
         border: 1px solid #e4e7eb;
@@ -529,6 +645,15 @@
         gap: 14px;
         max-height: 620px;
         overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .carreras-checkbox-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 6px;
+        min-height: 0;
         padding-right: 4px;
     }
 
@@ -656,6 +781,16 @@
             width: 100%;
         }
 
+        .dashboard-header-actions {
+            align-items: stretch;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .tabla-alertas-asistencia td {
+            font-size: .76rem;
+        }
+
         .edit-form-grid {
             grid-template-columns: 1fr;
         }
@@ -664,29 +799,22 @@
 
 <main class="asistencia-page">
     <div class="container">
-        @unless (auth()->check() && in_array($rolActivo, ['admin', 'profesor'], true))
+        @guest
         <section class="asistencia-hero">
-            <div class="asistencia-kicker">{{ auth()->check() ? 'Panel validado' : 'Acceso requerido' }}</div>
+            <div class="asistencia-kicker">Acceso requerido</div>
             <h1 class="asistencia-title">Sistema de asistencia</h1>
             <p class="asistencia-copy">
-                @auth
-                    Estás ingresando como {{ auth()->user()->name }}. El sistema muestra solamente la vista correspondiente a tu rol.
-                @else
-                    Iniciá sesión para entrar al panel de asistencia o registrate para pedir un acceso como alumno, profesor o admin.
-                @endauth
+                Iniciá sesión para entrar al panel de asistencia o registrate para pedir un acceso como alumno, profesor o admin.
             </p>
-
-            @auth
-                <div class="session-bar">
-                    <span class="status-pill">{{ ucfirst($rolActivo) }}</span>
-                    <form action="{{ route('asistencia.logout') }}" method="POST" class="m-0">
-                        @csrf
-                        <button class="asistencia-btn secondary" type="submit">Cerrar sesión</button>
-                    </form>
-                </div>
-            @endauth
         </section>
-        @endunless
+        @else
+            <div class="d-flex justify-content-end">
+                <form action="{{ route('asistencia.logout') }}" method="POST" class="m-0">
+                    @csrf
+                    <button class="asistencia-btn secondary btn-cerrar-sesion" type="submit">Cerrar sesión</button>
+                </form>
+            </div>
+        @endguest
 
         @if ($errors->any())
             <div class="alert alert-danger mt-4">
@@ -802,6 +930,28 @@
                     <span class="status-pill">{{ ($materiasAlumno ?? collect())->count() }} materia(s)</span>
                 </div>
                 <div class="dashboard-body">
+                    @if (($alertasAsistenciaAlumno ?? collect())->isNotEmpty())
+                        <div class="alert alert-danger alertas-asistencia" role="alert">
+                            <h3 class="alert-heading">Asistencia por debajo del mínimo</h3>
+                            <table class="tabla-alertas-asistencia">
+                                <tbody>
+                                    @foreach ($alertasAsistenciaAlumno as $alertaAsistencia)
+                                        <tr>
+                                            <td>
+                                                <strong>{{ $alertaAsistencia['materia']->descripcion }}</strong>
+                                                · {{ number_format($alertaAsistencia['porcentaje'], 1, ',', '.') }}%
+                                                · mínimo {{ $alertaAsistencia['porcentaje_minimo'] }}%
+                                            </td>
+                                            <td>
+                                                <a class="btn btn-sm btn-outline-danger" href="{{ route('asistencia.alumno.materia', $alertaAsistencia['materia']) }}">Ver detalle</a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+
                     @if (!($tieneTablaAsignaciones ?? false))
                         <div class="alert alert-warning mb-0">Las asignaciones de materias todavía no están disponibles.</div>
                     @elseif (($materiasAlumno ?? collect())->isEmpty())
@@ -812,13 +962,16 @@
                                 <div class="tool-panel">
                                     <h3>{{ $materiasCarrera->first()->deCarrera->descripcion ?? 'Sin carrera' }}</h3>
                                     @foreach ($materiasCarrera as $materiaAlumno)
-                                        <a class="materia-alumno-compacta text-decoration-none" href="{{ route('asistencia.alumno.materia', $materiaAlumno) }}">
+                                        <div class="materia-alumno-compacta">
                                             <span class="text-truncate">
                                                 <span class="row-title">{{ $materiaAlumno->descripcion }}</span>
                                                 <span class="row-subtitle">{{ $materiaAlumno->deAnio->anio ?? $materiaAlumno->deAnio->descripcion ?? 'Sin año' }} · {{ $materiaAlumno->horario && $materiaAlumno->horario->profesor ? $materiaAlumno->horario->profesor->apellido . ', ' . $materiaAlumno->horario->profesor->nombre : 'Profesor no informado' }}</span>
                                             </span>
-                                            <span class="badge-soft">Ver materia</span>
-                                        </a>
+                                            <span class="materia-alumno-acciones">
+                                                <button class="btn btn-outline-primary boton-escanear-qr js-escanear-qr" type="button" data-materia="{{ $materiaAlumno->descripcion }}">Escanear QR</button>
+                                                <a class="badge-soft text-decoration-none" href="{{ route('asistencia.alumno.materia', $materiaAlumno) }}">Ver materia</a>
+                                            </span>
+                                        </div>
                                     @endforeach
                                 </div>
                             @endforeach
@@ -893,18 +1046,13 @@
                     </div>
                 </div>
             </div>
+
         </section>
         @endif
         @endif
 
         @if ($rolActivo === 'profesor')
         <section id="panel-profesor" class="dashboard-panel active" role="tabpanel">
-            <div class="d-flex justify-content-end mb-3">
-                <form action="{{ route('asistencia.logout') }}" method="POST" class="m-0">
-                    @csrf
-                    <button class="asistencia-btn secondary" type="submit">Cerrar sesión</button>
-                </form>
-            </div>
             <div class="dashboard-shell">
                 <div class="dashboard-header">
                     <div>
@@ -986,19 +1134,22 @@
 
         @if ($rolActivo === 'admin')
         <section id="panel-admin" class="dashboard-panel active" role="tabpanel">
-            <div class="d-flex justify-content-end mb-3">
-                <form action="{{ route('asistencia.logout') }}" method="POST" class="m-0">
-                    @csrf
-                    <button class="asistencia-btn secondary" type="submit">Cerrar sesión</button>
-                </form>
-            </div>
             <div class="dashboard-shell">
                 <div class="dashboard-header">
                     <div>
                         <h2>Vista Admin</h2>
                         <p>Gestión de materias, profesores y alumnos para el sistema de asistencia.</p>
                     </div>
-                    <span class="status-pill">Administración real</span>
+                    <div class="dashboard-header-actions">
+                        @if ($carreraActiva ?? null)
+                            <span class="status-pill">{{ $carreraActiva->descripcion }}</span>
+                            @if (($carrerasPreceptor ?? collect())->count() > 1)
+                                <button class="asistencia-btn secondary" type="button" data-open-career-selector>Cambiar carrera</button>
+                            @endif
+                        @else
+                            <span class="status-pill">Administración real</span>
+                        @endif
+                    </div>
                 </div>
 
                 <div class="dashboard-body">
@@ -1130,91 +1281,9 @@
 
                     @if ($adminPuedeCrearAdmins ?? false)
                     <div class="tool-panel mb-4">
-                        <details class="admin-create-details">
-                            <summary class="asistencia-btn d-inline-block">Crear nuevo admin</summary>
-                            <div class="admin-create-body">
-                            <div>
-                        <div class="mb-3 d-none">
-                            <label class="form-label" for="admin_tipo_usuario">Tipo de usuario</label>
-                            <select id="admin_tipo_usuario" class="form-select">
-                                <option value="admin" selected>Admin</option>
-                            </select>
-                        </div>
-                        <div class="editable-grid">
-                            <form class="edit-item is-hidden js-admin-user-form" data-admin-user-form="alumno" action="{{ route('asistencia.admin.usuarios.crear') }}" method="POST">
-                                @csrf
-                                <input type="hidden" name="rol" value="alumno">
-                                <div class="edit-form-grid">
-                                    <div>
-                                        <label class="form-label" for="admin_alumno_nombre">Nombre</label>
-                                        <input id="admin_alumno_nombre" class="form-control" name="nombre" required>
-                                    </div>
-                                    <div>
-                                        <label class="form-label" for="admin_alumno_apellido">Apellido</label>
-                                        <input id="admin_alumno_apellido" class="form-control" name="apellido" required>
-                                    </div>
-                                    <div>
-                                        <label class="form-label" for="admin_alumno_dni">DNI</label>
-                                        <input id="admin_alumno_dni" class="form-control" type="number" name="dni" required>
-                                    </div>
-                                    <div>
-                                        <label class="form-label" for="admin_alumno_cuil">CUIL</label>
-                                        <input id="admin_alumno_cuil" class="form-control" type="number" name="cuil" placeholder="Opcional">
-                                    </div>
-                                    <div class="wide">
-                                        <label class="form-label" for="admin_alumno_email">Email</label>
-                                        <input id="admin_alumno_email" class="form-control" type="email" name="email" required>
-                                    </div>
-                                    <div class="wide">
-                                        <label class="form-label" for="admin_alumno_carrera">Carrera</label>
-                                        <select id="admin_alumno_carrera" class="form-select" name="carrera_id">
-                                            <option value="">Sin carrera</option>
-                                            @foreach (($carreras ?? collect()) as $carrera)
-                                                <option value="{{ $carrera->id }}">{{ $carrera->descripcion }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="form-label" for="admin_alumno_password">Contraseña</label>
-                                        <input id="admin_alumno_password" class="form-control" type="password" name="password" required>
-                                    </div>
-                                    <div>
-                                        <label class="form-label" for="admin_alumno_password_confirmation">Confirmar</label>
-                                        <input id="admin_alumno_password_confirmation" class="form-control" type="password" name="password_confirmation" required>
-                                    </div>
-                                </div>
-                                <button class="asistencia-btn mt-3" type="submit">Crear alumno</button>
-                            </form>
-
-                            <form class="edit-item is-hidden js-admin-user-form" data-admin-user-form="profesor" action="{{ route('asistencia.admin.usuarios.crear') }}" method="POST">
-                                @csrf
-                                <input type="hidden" name="rol" value="profesor">
-                                <div class="edit-form-grid">
-                                    <div>
-                                        <label class="form-label" for="admin_profesor_nombre">Nombre</label>
-                                        <input id="admin_profesor_nombre" class="form-control" name="nombre" required>
-                                    </div>
-                                    <div>
-                                        <label class="form-label" for="admin_profesor_apellido">Apellido</label>
-                                        <input id="admin_profesor_apellido" class="form-control" name="apellido" required>
-                                    </div>
-                                    <div class="wide">
-                                        <label class="form-label" for="admin_profesor_email">Email</label>
-                                        <input id="admin_profesor_email" class="form-control" type="email" name="email" required>
-                                    </div>
-                                    <div>
-                                        <label class="form-label" for="admin_profesor_password">Contraseña</label>
-                                        <input id="admin_profesor_password" class="form-control" type="password" name="password" required>
-                                    </div>
-                                    <div>
-                                        <label class="form-label" for="admin_profesor_password_confirmation">Confirmar</label>
-                                        <input id="admin_profesor_password_confirmation" class="form-control" type="password" name="password_confirmation" required>
-                                    </div>
-                                </div>
-                                <button class="asistencia-btn mt-3" type="submit">Crear profesor</button>
-                            </form>
-
-                            <form class="edit-item js-admin-user-form" data-admin-user-form="admin" action="{{ route('asistencia.admin.usuarios.crear') }}" method="POST">
+                        <details>
+                            <summary class="asistencia-btn d-inline-block">Crear nuevo preceptor</summary>
+                            <form class="edit-item mt-3 js-form-carreras-preceptor" style="max-width: 560px;" action="{{ route('asistencia.admin.usuarios.crear') }}" method="POST">
                                 @csrf
                                 <input type="hidden" name="rol" value="admin">
                                 <div class="mb-3">
@@ -1226,13 +1295,23 @@
                                     <input id="admin_usuario_email" class="form-control" type="email" name="email" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label" for="admin_usuario_carrera">Carrera</label>
-                                    <select id="admin_usuario_carrera" class="form-select" name="carrera_id" required>
-                                        <option value="">Seleccionar carrera</option>
+                                    <div class="form-label">Carreras administradas</div>
+                                    <div class="carreras-checkbox-list">
                                         @foreach (($carreras ?? collect()) as $carrera)
-                                            <option value="{{ $carrera->id }}">{{ $carrera->descripcion }}</option>
+                                            @php
+                                                $preceptorActualCarrera = ($preceptoresPorCarrera ?? collect())->get($carrera->id);
+                                            @endphp
+                                            <label class="materia-check-row">
+                                                <input class="form-check-input m-0" type="checkbox" name="carrera_ids[]" value="{{ $carrera->id }}"
+                                                    data-carrera-nombre="{{ $carrera->descripcion }}"
+                                                    data-preceptor-actual="{{ $preceptorActualCarrera->name ?? '' }}"
+                                                    data-asignada-inicialmente="0"
+                                                    {{ in_array($carrera->id, old('carrera_ids', [])) ? 'checked' : '' }}>
+                                                <span>{{ $carrera->descripcion }}</span>
+                                            </label>
                                         @endforeach
-                                    </select>
+                                    </div>
+                                    <div class="form-text">Seleccioná una o más carreras para el preceptor.</div>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label" for="admin_usuario_password">Contraseña</label>
@@ -1242,14 +1321,73 @@
                                     <label class="form-label" for="admin_usuario_password_confirmation">Confirmar contraseña</label>
                                     <input id="admin_usuario_password_confirmation" class="form-control" type="password" name="password_confirmation" required>
                                 </div>
-                                <button class="asistencia-btn" type="submit">Crear admin</button>
+                                <button class="asistencia-btn" type="submit">Crear preceptor</button>
                             </form>
-                        </div>
-                            </div>
-                            </div>
                         </details>
                     </div>
                     @endif
+
+                    @if ($adminPuedeCrearAdmins ?? false)
+                    <div class="tool-panel mb-4">
+                        <h3>Carreras de preceptores</h3>
+                        <p class="row-subtitle">Podés asignar más de una carrera a cada preceptor.</p>
+                        <div class="edit-stack js-preceptores-accordion">
+                            @forelse (($usuariosPreceptores ?? collect()) as $preceptor)
+                                <details class="edit-item js-preceptor-details">
+                                    <summary>
+                                        <strong>{{ $preceptor->name }}</strong>
+                                        <span class="row-subtitle ms-2">{{ $preceptor->email }}</span>
+                                    </summary>
+                                    <form class="mt-3 js-form-carreras-preceptor" action="{{ route('asistencia.admin.preceptores.carreras', $preceptor) }}" method="POST">
+                                        @csrf
+                                        @method('PUT')
+                                        <div class="carreras-checkbox-list">
+                                            @foreach (($carreras ?? collect()) as $carrera)
+                                                @php
+                                                    $preceptorActualCarrera = ($preceptoresPorCarrera ?? collect())->get($carrera->id);
+                                                    $carreraAsignadaAlPreceptor = ($preceptor->carreras_administradas_ids ?? collect())->contains($carrera->id);
+                                                @endphp
+                                                <label class="materia-check-row">
+                                                    <input class="form-check-input m-0" type="checkbox" name="carrera_ids[]" value="{{ $carrera->id }}"
+                                                        data-carrera-nombre="{{ $carrera->descripcion }}"
+                                                        data-preceptor-actual="{{ $preceptorActualCarrera->name ?? '' }}"
+                                                        data-asignada-inicialmente="{{ $carreraAsignadaAlPreceptor ? '1' : '0' }}"
+                                                        {{ $carreraAsignadaAlPreceptor ? 'checked' : '' }}>
+                                                    <span>{{ $carrera->descripcion }}</span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                        <button class="asistencia-btn mt-3" type="submit">Guardar carreras</button>
+                                    </form>
+                                </details>
+                            @empty
+                                <p class="text-muted mb-0">Todavía no hay preceptores creados.</p>
+                            @endforelse
+                        </div>
+                    </div>
+                    @endif
+
+                    <div id="modal-confirmar-sustituciones-preceptor" class="sustitucion-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="titulo-confirmar-sustituciones-preceptor">
+                        <div class="sustitucion-modal-dialog">
+                            <div class="asistencia-modal-header">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="sustitucion-modal-icon" aria-hidden="true">!</span>
+                                    <div>
+                                        <h3 id="titulo-confirmar-sustituciones-preceptor" class="mb-1">Confirmar cambio de preceptor</h3>
+                                        <p class="row-subtitle mb-0">Las siguientes carreras ya tienen un preceptor asignado.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="asistencia-modal-body">
+                                <p class="mb-0">Si continuás, el preceptor seleccionado reemplazará al actual:</p>
+                                <ul id="lista-confirmar-sustituciones-preceptor" class="sustitucion-lista"></ul>
+                            </div>
+                            <div class="asistencia-modal-footer justify-content-end">
+                                <button class="asistencia-btn secondary" type="button" data-cancelar-sustituciones-preceptor>Cancelar</button>
+                                <button class="asistencia-btn" type="button" data-confirmar-sustituciones-preceptor>Sustituir y guardar</button>
+                            </div>
+                        </div>
+                    </div>
 
                     @if ($adminPuedeCrearAdmins ?? false)
                     <div class="tool-panel mb-4">
@@ -1296,9 +1434,10 @@
                             <summary class="asistencia-btn d-inline-block">Validar profesores</summary>
                             <form class="mt-3" action="{{ route('asistencia.admin.usuarios.profesor') }}" method="POST">
                                 @csrf
+                                <input type="hidden" name="carrera_id" value="{{ $carreraActiva->id }}">
                                 <div class="filter-grid" style="grid-template-columns: 1fr;">
                                     <div>
-                                        <label class="form-label" for="buscar_usuario_sin_carrera">Buscar usuario sin carrera</label>
+                                        <label class="form-label" for="buscar_usuario_sin_carrera">Buscar profesor pendiente en esta carrera</label>
                                         <input id="buscar_usuario_sin_carrera" class="form-control" type="text" placeholder="Buscar por nombre o email">
                                     </div>
                                 </div>
@@ -1310,7 +1449,7 @@
                                             <span class="row-subtitle text-truncate">{{ $usuarioSinCarrera->email }}</span>
                                         </label>
                                     @empty
-                                        <p class="text-muted mb-0">No hay usuarios registrados sin carrera para validar.</p>
+                                        <p class="text-muted mb-0">No hay profesores pendientes de validación en esta carrera.</p>
                                     @endforelse
                                     <p id="usuarios_sin_carrera_vacio" class="text-muted mb-0 d-none">No se encontraron usuarios con esa búsqueda.</p>
                                 </div>
@@ -1408,7 +1547,6 @@
                                         <th>Materia</th>
                                         <th>Profesor</th>
                                         <th>Listado de alumnos</th>
-                                        <th>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1432,7 +1570,7 @@
                                             data-carrera-id="{{ $materia->carrera_id }}"
                                             data-anio-id="{{ $materia->anio_id }}">
                                             <td>
-                                                <button class="btn btn-link p-0 fw-bold text-start js-mostrar-alumnos-materia" type="button" data-listado-alumnos="listado-alumnos-materia-{{ $materia->id }}">{{ $materia->descripcion }}</button>
+                                                <a class="btn btn-link p-0 fw-bold text-start" href="{{ route('asistencia.admin.materia', $materia) }}" target="_blank" rel="noopener">{{ $materia->descripcion }}</a>
                                                 <div class="row-subtitle">
                                                     {{ $materia->deCarrera->descripcion ?? 'Sin carrera' }}
                                                     @if ($materia->deAnio)
@@ -1471,50 +1609,13 @@
                                                 <span class="badge-soft">{{ ($tieneTablaAsignaciones ?? false) ? $materia->alumnos->count() : 0 }} alumno(s)</span>
                                             </td>
                                         </tr>
-                                        <tr id="listado-alumnos-materia-{{ $materia->id }}" class="d-none js-listado-alumnos-materia">
-                                            <td colspan="4" class="bg-light p-3">
-                                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                                    <strong>Planilla de alumnos: {{ $materia->descripcion }}</strong>
-                                                    <span class="badge-soft">{{ ($tieneTablaAsignaciones ?? false) ? $materia->alumnos->count() : 0 }} alumno(s)</span>
-                                                </div>
-                                                @if ($tieneTablaAsignaciones ?? false)
-                                                    <div class="table-responsive bg-white border rounded">
-                                                        <table class="table table-sm align-middle mb-0">
-                                                            <thead><tr><th>Apellido y nombre</th><th>DNI</th><th>Correo electrónico</th><th></th></tr></thead>
-                                                            <tbody>
-                                                                @forelse ($materia->alumnos as $alumno)
-                                                                    <tr>
-                                                                        <td>{{ $alumno->apellido }}, {{ $alumno->nombre }}</td>
-                                                                        <td>{{ $alumno->dni }}</td>
-                                                                        <td>{{ $alumno->email }}</td>
-                                                                        <td>
-                                                                            <form action="{{ route('asistencia.admin.alumno.quitar') }}" method="POST" class="m-0">
-                                                                                @csrf
-                                                                                @method('DELETE')
-                                                                                <input type="hidden" name="materia_id" value="{{ $materia->id }}">
-                                                                                <input type="hidden" name="registro_id" value="{{ $alumno->id }}">
-                                                                                <button class="btn btn-sm btn-outline-danger" type="submit">Quitar</button>
-                                                                            </form>
-                                                                        </td>
-                                                                    </tr>
-                                                                @empty
-                                                                    <tr><td colspan="4" class="text-center text-muted">Sin alumnos asignados.</td></tr>
-                                                                @endforelse
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                @else
-                                                    <span class="text-muted">Pendiente de migración.</span>
-                                                @endif
-                                            </td>
-                                        </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="4" class="text-center text-muted">Todavía no hay materias cargadas.</td>
+                                            <td colspan="3" class="text-center text-muted">Todavía no hay materias cargadas.</td>
                                         </tr>
                                     @endforelse
                                     <tr id="materias_configuradas_vacio">
-                                            <td colspan="4" class="text-center text-muted">Usá el buscador o elegí carrera y año para ver materias.</td>
+                                            <td colspan="3" class="text-center text-muted">Usá el buscador o elegí carrera y año para ver materias.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -1525,9 +1626,12 @@
                     @foreach (($usuariosProfesores ?? collect()) as $usuarioProfesor)
                         <div id="materias-profesor-{{ $usuarioProfesor->id }}" class="asistencia-modal" aria-hidden="true">
                             <div class="asistencia-modal-dialog">
-                                <form action="{{ route('asistencia.admin.profesores.materias') }}" method="POST">
+                                <form class="js-form-materias-profesor" action="{{ route('asistencia.admin.profesores.materias') }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="user_id" value="{{ $usuarioProfesor->id }}">
+                                    @if ($carreraActiva ?? null)
+                                        <input type="hidden" name="carrera_contexto_id" value="{{ $carreraActiva->id }}">
+                                    @endif
                                     <div class="asistencia-modal-header">
                                         <div>
                                             <h3 class="mb-0">Materias de {{ $usuarioProfesor->name }}</h3>
@@ -1562,10 +1666,21 @@
                                         </div>
                                         <div class="edit-stack js-modal-materias" style="gap: 6px; max-height: none;">
                                             @forelse (($materias ?? collect())->whereIn('id', $materiasAdministrablesIds ?? collect()) as $materia)
+                                                @php
+                                                    $materiaAsignadaAlProfesor = ($usuarioProfesor->materias_asignadas_ids ?? collect())->contains($materia->id);
+                                                    $profesorActual = optional($materia->horario)->profesor;
+                                                    $nombreProfesorActual = $profesorActual
+                                                        ? trim($profesorActual->apellido . ', ' . $profesorActual->nombre)
+                                                        : '';
+                                                @endphp
                                                 <label class="materia-check-row js-modal-materia-row"
                                                     data-carrera-id="{{ $materia->carrera_id }}"
                                                     data-anio-id="{{ $materia->anio_id }}">
-                                                    <input class="form-check-input m-0" type="checkbox" name="materia_ids[]" value="{{ $materia->id }}" {{ ($usuarioProfesor->materias_asignadas_ids ?? collect())->contains($materia->id) ? 'checked' : '' }}>
+                                                    <input class="form-check-input m-0" type="checkbox" name="materia_ids[]" value="{{ $materia->id }}"
+                                                        data-materia-nombre="{{ $materia->descripcion }}"
+                                                        data-profesor-actual="{{ $nombreProfesorActual }}"
+                                                        data-asignada-inicialmente="{{ $materiaAsignadaAlProfesor ? '1' : '0' }}"
+                                                        {{ $materiaAsignadaAlProfesor ? 'checked' : '' }}>
                                                     <span class="text-truncate">
                                                         <strong>{{ $materia->descripcion }}</strong>
                                                         <span class="row-subtitle ms-2">
@@ -1590,6 +1705,28 @@
                             </div>
                         </div>
                     @endforeach
+
+                    <div id="modal-confirmar-sustituciones" class="sustitucion-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="titulo-confirmar-sustituciones">
+                        <div class="sustitucion-modal-dialog">
+                            <div class="asistencia-modal-header">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="sustitucion-modal-icon" aria-hidden="true">!</span>
+                                    <div>
+                                        <h3 id="titulo-confirmar-sustituciones" class="mb-1">Confirmar sustitución</h3>
+                                        <p class="row-subtitle mb-0">Las siguientes materias ya tienen un profesor asignado.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="asistencia-modal-body">
+                                <p class="mb-0">Si continuás, el profesor seleccionado reemplazará al actual:</p>
+                                <ul id="lista-confirmar-sustituciones" class="sustitucion-lista"></ul>
+                            </div>
+                            <div class="asistencia-modal-footer justify-content-end">
+                                <button class="asistencia-btn secondary" type="button" data-cancelar-sustituciones>Cancelar</button>
+                                <button class="asistencia-btn" type="button" data-confirmar-sustituciones>Sustituir y guardar</button>
+                            </div>
+                        </div>
+                    </div>
 
                     <div id="admin-tab-carreras" class="admin-tab-panel d-none" style="display: none;">
                         <div class="editable-grid">
@@ -1699,14 +1836,129 @@
                     </div>
                 </div>
             </div>
+
+            @if (($carrerasPreceptor ?? collect())->count() > 1)
+                <div id="modal-seleccionar-carrera" class="asistencia-modal{{ ($mostrarSelectorCarrera ?? false) ? ' active' : '' }}" role="dialog" aria-modal="true" aria-hidden="{{ ($mostrarSelectorCarrera ?? false) ? 'false' : 'true' }}" aria-labelledby="titulo-seleccionar-carrera">
+                    <div class="asistencia-modal-dialog" style="max-width: 560px;">
+                        <form action="{{ route('asistencia.index') }}" method="GET">
+                            <input type="hidden" name="admin_tab" value="{{ $adminTabActivo }}">
+                            <div class="asistencia-modal-header">
+                                <div>
+                                    <h3 id="titulo-seleccionar-carrera" class="mb-1">Cambiar carrera</h3>
+                                    <p class="row-subtitle mb-0">Elegí la carrera que querés administrar.</p>
+                                </div>
+                                <button class="asistencia-btn secondary" type="button" data-close-career-selector>Cerrar</button>
+                            </div>
+                            <div class="asistencia-modal-body">
+                                <div class="career-choice-list">
+                                    @foreach ($carrerasPreceptor as $carreraPreceptor)
+                                        <label class="materia-check-row career-choice">
+                                            <input class="form-check-input m-0" type="radio" name="carrera_id" value="{{ $carreraPreceptor->id }}" {{ ($carreraActiva && $carreraActiva->id === $carreraPreceptor->id) ? 'checked' : '' }} required>
+                                            <span>{{ $carreraPreceptor->descripcion }}</span>
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div class="asistencia-modal-footer">
+                                <button class="asistencia-btn secondary" type="button" data-close-career-selector>Cancelar</button>
+                                <button class="asistencia-btn" type="submit">Usar esta carrera</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            @endif
         </section>
         @endif
         @endguest
     </div>
+
+    @auth
+        @if (($rolUsuario ?? null) === 'alumno')
+            <div class="modal fade" id="modalEscanearQr" tabindex="-1" aria-labelledby="tituloModalEscanearQr" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title h5" id="tituloModalEscanearQr">Escanear código QR</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p id="materiaQrAlumno" class="text-muted text-center"></p>
+                            <div id="lector_qr_alumno"></div>
+                            <div id="mensaje_qr_alumno" class="alert alert-danger d-none mt-3 mb-0"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+    @endauth
 </main>
 
+@auth
+    @if (($rolUsuario ?? null) === 'alumno')
+        <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    @endif
+@endauth
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const modalQrElement = document.getElementById('modalEscanearQr');
+        if (modalQrElement && typeof Html5Qrcode !== 'undefined') {
+            const modalQr = new bootstrap.Modal(modalQrElement);
+            const materiaQr = document.getElementById('materiaQrAlumno');
+            const mensajeQr = document.getElementById('mensaje_qr_alumno');
+            let lectorQr = null;
+            let lecturaCompletada = false;
+
+            document.querySelectorAll('.js-escanear-qr').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    materiaQr.textContent = button.dataset.materia || '';
+                    mensajeQr.classList.add('d-none');
+                    mensajeQr.textContent = '';
+                    lecturaCompletada = false;
+                    modalQr.show();
+                });
+            });
+
+            modalQrElement.addEventListener('shown.bs.modal', function () {
+                lectorQr = new Html5Qrcode('lector_qr_alumno');
+                lectorQr.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 230, height: 230 } },
+                    function (textoQr) {
+                        if (lecturaCompletada) return;
+
+                        try {
+                            const destino = new URL(textoQr);
+                            if (!destino.pathname.includes('/asistencia/qr/')) {
+                                throw new Error('Código incorrecto');
+                            }
+
+                            lecturaCompletada = true;
+                            const urlLocal = window.location.origin + destino.pathname + destino.search;
+                            lectorQr.stop().finally(function () {
+                                window.location.href = urlLocal;
+                            });
+                        } catch (error) {
+                            mensajeQr.textContent = 'Este código QR no pertenece al sistema de asistencia.';
+                            mensajeQr.classList.remove('d-none');
+                        }
+                    },
+                    function () {}
+                ).catch(function () {
+                    mensajeQr.textContent = 'No se pudo abrir la cámara. Revisá los permisos del navegador.';
+                    mensajeQr.classList.remove('d-none');
+                });
+            });
+
+            modalQrElement.addEventListener('hidden.bs.modal', function () {
+                if (lectorQr && lectorQr.isScanning) {
+                    lectorQr.stop().then(function () { lectorQr.clear(); }).catch(function () {});
+                } else if (lectorQr) {
+                    lectorQr.clear();
+                }
+                lectorQr = null;
+            });
+        }
+
         const roleButtons = document.querySelectorAll('.role-button');
         const panels = document.querySelectorAll('.dashboard-panel');
         const searchInputs = document.querySelectorAll('.js-buscador');
@@ -1721,8 +1973,7 @@
         const editMatterSearch = document.getElementById('filtro_editar_materia');
         const editMatterForms = document.querySelectorAll('.js-editar-materia');
         const editMatterEmpty = document.getElementById('editar_materias_vacio');
-        const adminUserType = document.getElementById('admin_tipo_usuario');
-        const adminUserForms = document.querySelectorAll('.js-admin-user-form');
+        const preceptorAccordions = document.querySelectorAll('.js-preceptores-accordion');
         const userWithoutCareerSearch = document.getElementById('buscar_usuario_sin_carrera');
         const userWithoutCareerRows = document.querySelectorAll('.js-usuario-sin-carrera');
         const userWithoutCareerEmpty = document.getElementById('usuarios_sin_carrera_vacio');
@@ -1735,6 +1986,7 @@
         const principalStudentSearch = document.getElementById('buscar_directora_alumno');
         const principalStudentRows = document.querySelectorAll('.js-directora-alumno');
         const principalStudentEmpty = document.getElementById('directora_alumnos_vacio');
+        const careerSelectorModal = document.getElementById('modal-seleccionar-carrera');
         const autocompleteSources = {
             materias: [
                 @foreach (($materias ?? collect()) as $materia)
@@ -1770,6 +2022,70 @@
             ]
         };
 
+        function setCareerSelectorOpen(open) {
+            if (!careerSelectorModal) {
+                return;
+            }
+
+            careerSelectorModal.classList.toggle('active', open);
+            careerSelectorModal.setAttribute('aria-hidden', open ? 'false' : 'true');
+
+            if (open) {
+                const selectedCareer = careerSelectorModal.querySelector('input[name="carrera_id"]:checked');
+                if (selectedCareer) {
+                    selectedCareer.focus();
+                }
+            }
+        }
+
+        document.querySelectorAll('[data-open-career-selector]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                setCareerSelectorOpen(true);
+            });
+        });
+
+        document.querySelectorAll('[data-close-career-selector]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                setCareerSelectorOpen(false);
+            });
+        });
+
+        if (careerSelectorModal) {
+            careerSelectorModal.addEventListener('click', function (event) {
+                if (event.target === careerSelectorModal) {
+                    setCareerSelectorOpen(false);
+                }
+            });
+
+            if (careerSelectorModal.classList.contains('active')) {
+                setCareerSelectorOpen(true);
+            }
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && careerSelectorModal && careerSelectorModal.classList.contains('active')) {
+                setCareerSelectorOpen(false);
+            }
+        });
+
+        preceptorAccordions.forEach(function (accordion) {
+            const preceptorDetails = accordion.querySelectorAll('.js-preceptor-details');
+
+            preceptorDetails.forEach(function (details) {
+                details.addEventListener('toggle', function () {
+                    if (!details.open) {
+                        return;
+                    }
+
+                    preceptorDetails.forEach(function (otherDetails) {
+                        if (otherDetails !== details) {
+                            otherDetails.open = false;
+                        }
+                    });
+                });
+            });
+        });
+
         function normalizeText(value) {
             return value
                 .toString()
@@ -1786,28 +2102,6 @@
                     resultsBox.innerHTML = '';
                 }
             });
-        }
-
-        function syncAdminUserForms() {
-            if (!adminUserType) {
-                return;
-            }
-
-            const selectedType = adminUserType.value;
-            adminUserForms.forEach(function (form) {
-                const isActive = form.dataset.adminUserForm === selectedType;
-                form.classList.toggle('is-hidden', !isActive);
-                form.querySelectorAll('input, select').forEach(function (field) {
-                    if (field.type !== 'hidden') {
-                        field.disabled = !isActive;
-                    }
-                });
-            });
-        }
-
-        if (adminUserType) {
-            adminUserType.addEventListener('change', syncAdminUserForms);
-            syncAdminUserForms();
         }
 
         function filterUsersWithoutCareer() {
@@ -1934,6 +2228,149 @@
             });
         });
 
+        const careerReplacementModal = document.getElementById('modal-confirmar-sustituciones-preceptor');
+        const careerReplacementList = document.getElementById('lista-confirmar-sustituciones-preceptor');
+        let pendingCareerForm = null;
+
+        function closeCareerReplacementModal() {
+            if (!careerReplacementModal) {
+                return;
+            }
+
+            careerReplacementModal.classList.remove('active');
+            careerReplacementModal.setAttribute('aria-hidden', 'true');
+            pendingCareerForm = null;
+        }
+
+        function openCareerReplacementModal(replacements, form) {
+            if (!careerReplacementModal || !careerReplacementList) {
+                return;
+            }
+
+            pendingCareerForm = form;
+            careerReplacementList.innerHTML = '';
+
+            replacements.forEach(function (replacement) {
+                const item = document.createElement('li');
+                item.textContent = 'Sustituir a ' + replacement.preceptor + ' como preceptor de la carrera ' + replacement.career + '.';
+                careerReplacementList.appendChild(item);
+            });
+
+            careerReplacementModal.classList.add('active');
+            careerReplacementModal.setAttribute('aria-hidden', 'false');
+            careerReplacementModal.querySelector('[data-confirmar-sustituciones-preceptor]').focus();
+        }
+
+        document.querySelectorAll('.js-form-carreras-preceptor').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (form.dataset.sustitucionesPreceptorConfirmadas === '1') {
+                    delete form.dataset.sustitucionesPreceptorConfirmadas;
+                    return;
+                }
+
+                const replacements = [];
+                form.querySelectorAll('input[name="carrera_ids[]"]:checked').forEach(function (checkbox) {
+                    const wasInitiallyAssigned = checkbox.dataset.asignadaInicialmente === '1';
+                    const currentPreceptor = (checkbox.dataset.preceptorActual || '').trim();
+
+                    if (!wasInitiallyAssigned && currentPreceptor) {
+                        replacements.push({
+                            preceptor: currentPreceptor,
+                            career: checkbox.dataset.carreraNombre
+                        });
+                    }
+                });
+
+                if (replacements.length > 0) {
+                    event.preventDefault();
+                    openCareerReplacementModal(replacements, form);
+                }
+            });
+        });
+
+        if (careerReplacementModal) {
+            careerReplacementModal.querySelector('[data-cancelar-sustituciones-preceptor]').addEventListener('click', closeCareerReplacementModal);
+            careerReplacementModal.querySelector('[data-confirmar-sustituciones-preceptor]').addEventListener('click', function () {
+                if (!pendingCareerForm) {
+                    return;
+                }
+
+                const form = pendingCareerForm;
+                form.dataset.sustitucionesPreceptorConfirmadas = '1';
+                closeCareerReplacementModal();
+                form.requestSubmit();
+            });
+            careerReplacementModal.addEventListener('click', function (event) {
+                if (event.target === careerReplacementModal) {
+                    closeCareerReplacementModal();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && careerReplacementModal && careerReplacementModal.classList.contains('active')) {
+                closeCareerReplacementModal();
+            }
+        });
+
+        const replacementModal = document.getElementById('modal-confirmar-sustituciones');
+        const replacementList = document.getElementById('lista-confirmar-sustituciones');
+        let pendingSubjectForm = null;
+
+        function closeReplacementModal() {
+            if (!replacementModal) {
+                return;
+            }
+
+            replacementModal.classList.remove('active');
+            replacementModal.setAttribute('aria-hidden', 'true');
+            pendingSubjectForm = null;
+        }
+
+        function openReplacementModal(replacements, form) {
+            if (!replacementModal || !replacementList) {
+                return;
+            }
+
+            pendingSubjectForm = form;
+            replacementList.innerHTML = '';
+
+            replacements.forEach(function (replacement) {
+                const item = document.createElement('li');
+                item.textContent = 'Sustituir a ' + replacement.teacher + ' en la materia ' + replacement.subject + '.';
+                replacementList.appendChild(item);
+            });
+
+            replacementModal.classList.add('active');
+            replacementModal.setAttribute('aria-hidden', 'false');
+            replacementModal.querySelector('[data-confirmar-sustituciones]').focus();
+        }
+
+        if (replacementModal) {
+            replacementModal.querySelector('[data-cancelar-sustituciones]').addEventListener('click', closeReplacementModal);
+            replacementModal.querySelector('[data-confirmar-sustituciones]').addEventListener('click', function () {
+                if (!pendingSubjectForm) {
+                    return;
+                }
+
+                const form = pendingSubjectForm;
+                form.dataset.sustitucionesConfirmadas = '1';
+                closeReplacementModal();
+                form.requestSubmit();
+            });
+            replacementModal.addEventListener('click', function (event) {
+                if (event.target === replacementModal) {
+                    closeReplacementModal();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && replacementModal && replacementModal.classList.contains('active')) {
+                closeReplacementModal();
+            }
+        });
+
         document.querySelectorAll('.asistencia-modal').forEach(function (modal) {
             modal.addEventListener('click', function (event) {
                 if (event.target === modal) {
@@ -1947,6 +2384,35 @@
                     filterModalSubjects(modal);
                 });
             });
+
+            const subjectForm = modal.querySelector('.js-form-materias-profesor');
+            if (subjectForm) {
+                subjectForm.addEventListener('submit', function (event) {
+                    if (subjectForm.dataset.sustitucionesConfirmadas === '1') {
+                        delete subjectForm.dataset.sustitucionesConfirmadas;
+                        return;
+                    }
+
+                    const replacements = [];
+
+                    subjectForm.querySelectorAll('input[name="materia_ids[]"]:checked').forEach(function (checkbox) {
+                        const wasInitiallyAssigned = checkbox.dataset.asignadaInicialmente === '1';
+                        const currentTeacher = (checkbox.dataset.profesorActual || '').trim();
+
+                        if (!wasInitiallyAssigned && currentTeacher) {
+                            replacements.push({
+                                teacher: currentTeacher,
+                                subject: checkbox.dataset.materiaNombre
+                            });
+                        }
+                    });
+
+                    if (replacements.length > 0) {
+                        event.preventDefault();
+                        openReplacementModal(replacements, subjectForm);
+                    }
+                });
+            }
         });
 
         roleButtons.forEach(function (button) {
@@ -2034,21 +2500,6 @@
             });
         }
         filterConfiguredSubjects();
-
-        document.querySelectorAll('.js-mostrar-alumnos-materia').forEach(function (button) {
-            button.addEventListener('click', function () {
-                const listado = document.getElementById(button.dataset.listadoAlumnos);
-                if (!listado) {
-                    return;
-                }
-
-                const estabaAbierto = !listado.classList.contains('d-none');
-                document.querySelectorAll('.js-listado-alumnos-materia').forEach(function (fila) {
-                    fila.classList.add('d-none');
-                });
-                listado.classList.toggle('d-none', estabaAbierto);
-            });
-        });
 
         function filterEditableSubjects() {
             if (!editMatterForms.length) {

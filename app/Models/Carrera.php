@@ -28,6 +28,11 @@ class Carrera extends Model
         return $this->hasMany(Materia::class, 'carrera_id');
     }
 
+    public function preceptores()
+    {
+        return $this->belongsToMany(User::class, 'carrera_user')->withTimestamps();
+    }
+
     public function sedes()
     {
         return $this->belongsToMany(Sede::class, 'carrerasedes')

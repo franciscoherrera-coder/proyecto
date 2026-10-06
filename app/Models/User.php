@@ -51,4 +51,14 @@ class User extends Authenticatable
     {
         return $this->hasOne(Registro::class, 'dni', 'dni');
     }
+
+    public function carrerasAdministradas()
+    {
+        return $this->belongsToMany(Carrera::class, 'carrera_user')->withTimestamps();
+    }
+
+    public function carrerasComoProfesor()
+    {
+        return $this->belongsToMany(Carrera::class, 'carrera_profesor_user')->withTimestamps();
+    }
 }

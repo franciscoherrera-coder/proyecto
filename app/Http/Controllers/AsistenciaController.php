@@ -6,6 +6,7 @@ use App\Models\Materia;
 use App\Models\Profesor;
 use App\Models\Horario;
 use App\Models\AsistenciaDiaria;
+use App\Models\CodigoQrAsistencia;
 use App\Models\Registro;
 use App\Models\Carrera;
 use App\Models\Anio;
@@ -16,21 +17,53 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class AsistenciaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $tieneTablaAsignaciones = Schema::hasTable('materia_registro');
         $usuarioActual = Auth::user();
         $rolUsuario = $this->rolDesdeUsuario(Auth::user());
         $adminPuedeCrearAdmins = $this->esDirectoraAsistencia($usuarioActual);
-        $carreraAdminId = $this->carreraIdUsuario($usuarioActual);
+        $carreraAdminIds = $this->carreraIdsUsuario($usuarioActual);
+        $carrerasPreceptor = collect();
+        $carreraActiva = null;
+        $mostrarSelectorCarrera = false;
+
+        if ($rolUsuario === 'admin' && !$adminPuedeCrearAdmins) {
+            $carrerasPreceptor = Carrera::whereIn('id', $carreraAdminIds)
+                ->orderBy('descripcion')
+                ->get();
+
+            $carreraSolicitadaId = $request->filled('carrera_id')
+                ? (int) $request->query('carrera_id')
+                : null;
+            $carreraGuardadaId = (int) $request->session()->get('asistencia_carrera_id', 0);
+            $carreraActiva = $carrerasPreceptor->firstWhere('id', $carreraSolicitadaId)
+                ?? $carrerasPreceptor->firstWhere('id', $carreraGuardadaId)
+                ?? $carrerasPreceptor->first();
+
+            if ($carreraActiva) {
+                $request->session()->put('asistencia_carrera_id', $carreraActiva->id);
+            }
+
+            $mostrarSelectorCarrera = $carrerasPreceptor->count() > 1
+                && !$carreraSolicitadaId
+                && !$carreraGuardadaId;
+        }
+
+        $carreraActivaId = $carreraActiva ? (int) $carreraActiva->id : null;
         $materiaIdsDesdeHorarios = Horario::whereNotNull('materia_id')
             ->pluck('materia_id')
             ->unique();
         $materiasQuery = Materia::with(['deCarrera', 'deAnio', 'horario.profesor'])
             ->whereIn('id', $materiaIdsDesdeHorarios)
+            ->when($carreraActivaId, function ($query) use ($carreraActivaId) {
+                $query->where('carrera_id', $carreraActivaId);
+            })
             ->orderBy('carrera_id')
             ->orderBy('anio_id')
             ->orderBy('orden');
@@ -39,34 +72,58 @@ class AsistenciaController extends Controller
             $materiasQuery->with('alumnos');
         }
 
+        $emailsProfesores = User::where('is_admin', 2)
+            ->whereNotNull('email')
+            ->pluck('email');
+        $dnisProfesores = Schema::hasColumn('users', 'dni')
+            ? User::where('is_admin', 2)->whereNotNull('dni')->pluck('dni')
+            : collect();
         $emailsSinCarrera = Registro::whereNull('carrera_id')->pluck('email');
         $alumnosPorCarrera = Registro::with('carrera')
-            ->when(!$adminPuedeCrearAdmins, function ($query) use ($carreraAdminId) {
-                $query->where('carrera_id', $carreraAdminId);
+            ->whereNotIn('email', $emailsProfesores)
+            ->when($dnisProfesores->isNotEmpty(), function ($query) use ($dnisProfesores) {
+                $query->whereNotIn('dni', $dnisProfesores);
+            })
+            ->when(!$adminPuedeCrearAdmins, function ($query) use ($carreraAdminIds) {
+                $query->whereIn('carrera_id', $carreraAdminIds);
+            })
+            ->when($carreraActivaId, function ($query) use ($carreraActivaId) {
+                $query->where('carrera_id', $carreraActivaId);
             })
             ->orderBy('carrera_id')
             ->orderBy('apellido')
             ->orderBy('nombre')
             ->get();
-        $usuariosProfesores = User::where('is_admin', 2)
+        $usuariosProfesoresQuery = User::where('is_admin', 2);
+        if ($carreraActivaId) {
+            if (Schema::hasTable('carrera_profesor_user')) {
+                $usuariosProfesoresQuery->whereIn('id', DB::table('carrera_profesor_user')
+                    ->select('user_id')
+                    ->where('carrera_id', $carreraActivaId));
+            } elseif (Schema::hasColumn('users', 'carrera_id')) {
+                $usuariosProfesoresQuery->where('carrera_id', $carreraActivaId);
+            }
+        }
+
+        $usuariosProfesores = $usuariosProfesoresQuery
             ->orderBy('name')
             ->orderBy('email')
             ->get()
-            ->map(function ($user) {
-                [$nombre, $apellido] = $this->partesNombreUsuario($user);
-                $profesor = Profesor::where('nombre', $nombre)
-                    ->where('apellido', $apellido)
-                    ->first();
-
-                $materiasAsignadas = $profesor
-                    ? Horario::where('profesor_id', $profesor->id)
+            ->map(function ($user) use ($carreraActivaId) {
+                $profesores = $this->profesoresDesdeUsuario($user);
+                $profesorIds = $profesores->pluck('id');
+                $materiasAsignadas = $profesorIds->isNotEmpty()
+                    ? Horario::whereIn('profesor_id', $profesorIds)
                         ->whereNotNull('materia_id')
+                        ->when($carreraActivaId, function ($query) use ($carreraActivaId) {
+                            $query->whereIn('materia_id', Materia::where('carrera_id', $carreraActivaId)->select('id'));
+                        })
                         ->pluck('materia_id')
                         ->unique()
                         ->values()
                     : collect();
 
-                $user->profesor_asistencia_id = $profesor ? $profesor->id : null;
+                $user->profesor_asistencia_id = optional($profesores->first())->id;
                 $user->materias_asignadas_ids = $materiasAsignadas;
                 $user->materias_asignadas_count = $materiasAsignadas->count();
 
@@ -85,6 +142,33 @@ class AsistenciaController extends Controller
             ->values();
         $materiasProfesor = collect();
         $materiasAlumno = collect();
+        $alertasAsistenciaAlumno = collect();
+        $usuariosPreceptores = collect();
+        $preceptoresPorCarrera = collect();
+
+        if ($adminPuedeCrearAdmins) {
+            $usuariosPreceptores = User::where('is_admin', 1)
+                ->where('email', '!=', 'admin.asistencia@isft38.test')
+                ->orderBy('name')
+                ->orderBy('email')
+                ->get()
+                ->map(function ($user) {
+                    $user->carreras_administradas_ids = $this->carreraIdsUsuario($user);
+
+                    return $user;
+                });
+
+            if (Schema::hasTable('carrera_user')) {
+                $preceptoresPorCarrera = DB::table('carrera_user')
+                    ->join('users', 'users.id', '=', 'carrera_user.user_id')
+                    ->where('users.is_admin', 1)
+                    ->where('users.email', '!=', 'admin.asistencia@isft38.test')
+                    ->orderByDesc('carrera_user.id')
+                    ->get(['carrera_user.carrera_id', 'users.id as user_id', 'users.name'])
+                    ->unique('carrera_id')
+                    ->keyBy('carrera_id');
+            }
+        }
 
         if ($rolUsuario === 'profesor') {
             $profesorIdsUsuario = $this->profesoresDesdeUsuario(Auth::user())->pluck('id');
@@ -119,35 +203,104 @@ class AsistenciaController extends Controller
                     ->orderBy('anio_id')
                     ->orderBy('orden')
                     ->get();
+
+                $asistenciasMateriasAlumno = AsistenciaDiaria::whereIn('materia_id', $materiasAlumno->pluck('id'))
+                    ->get()
+                    ->groupBy('materia_id');
+
+                $alertasAsistenciaAlumno = $materiasAlumno->map(function ($materia) use ($registroAlumno, $asistenciasMateriasAlumno) {
+                    $asistenciasMateria = $asistenciasMateriasAlumno->get($materia->id, collect());
+                    $clasesTotales = $asistenciasMateria
+                        ->pluck('fecha')
+                        ->map(fn ($fecha) => Carbon::parse($fecha)->toDateString())
+                        ->unique()
+                        ->count();
+
+                    if ($clasesTotales === 0) {
+                        return null;
+                    }
+
+                    $historialAlumno = $asistenciasMateria->where('registro_id', $registroAlumno->id);
+                    $presencias = $historialAlumno->where('estado', 'presente')->count()
+                        + ($historialAlumno->where('estado', 'tarde')->count() * 0.5);
+                    $porcentaje = ($presencias / $clasesTotales) * 100;
+                    $esPractica = $this->esMateriaPractica($materia);
+                    $porcentajeMinimo = $esPractica ? 80 : 60;
+
+                    if ($porcentaje >= $porcentajeMinimo) {
+                        return null;
+                    }
+
+                    return [
+                        'materia' => $materia,
+                        'porcentaje' => $porcentaje,
+                        'porcentaje_minimo' => $porcentajeMinimo,
+                        'es_practica' => $esPractica,
+                    ];
+                })->filter()->values();
+            }
+        }
+
+        $materiasAdministrablesQuery = $this->materiasAdministrablesQuery($usuarioActual);
+        if ($carreraActivaId) {
+            $materiasAdministrablesQuery->where('carrera_id', $carreraActivaId);
+        }
+
+        $usuariosSinCarreraQuery = User::whereIn('email', $emailsSinCarrera)
+            ->where(function ($query) {
+                $query->whereNull('is_admin')->orWhereIn('is_admin', [0, 2]);
+            });
+
+        if ($carreraActivaId) {
+            if (Schema::hasTable('carrera_profesor_user')) {
+                $usuariosSinCarreraQuery->whereNotIn('id', DB::table('carrera_profesor_user')
+                    ->select('user_id')
+                    ->where('carrera_id', $carreraActivaId));
+            } elseif (Schema::hasColumn('users', 'carrera_id')) {
+                $usuariosSinCarreraQuery->where(function ($query) use ($carreraActivaId) {
+                    $query->whereNull('carrera_id')->orWhere('carrera_id', '!=', $carreraActivaId);
+                });
             }
         }
 
         return view('frontend.asistencia.index', [
             'materias' => $materiasQuery->get(),
-            'materiasAdministrablesIds' => $this->materiasAdministrablesQuery($usuarioActual)->pluck('id'),
+            'materiasAdministrablesIds' => $materiasAdministrablesQuery->pluck('id'),
             'materiasProfesor' => $materiasProfesor,
             'materiasAlumno' => $materiasAlumno,
+            'alertasAsistenciaAlumno' => $alertasAsistenciaAlumno,
             'profesores' => $profesoresDesdeHorarios,
-            'alumnos' => Registro::orderBy('apellido')->orderBy('nombre')->get(),
+            'alumnos' => Registro::whereNotIn('email', $emailsProfesores)
+                ->when($dnisProfesores->isNotEmpty(), function ($query) use ($dnisProfesores) {
+                    $query->whereNotIn('dni', $dnisProfesores);
+                })
+                ->when($carreraActivaId, function ($query) use ($carreraActivaId) {
+                    $query->where('carrera_id', $carreraActivaId);
+                })
+                ->orderBy('apellido')
+                ->orderBy('nombre')
+                ->get(),
             'alumnosPorCarrera' => $alumnosPorCarrera,
             'carreras' => Carrera::orderBy('descripcion')->get(),
             'carrerasAdministrables' => $adminPuedeCrearAdmins
                 ? Carrera::orderBy('descripcion')->get()
-                : Carrera::where('id', $carreraAdminId)->orderBy('descripcion')->get(),
+                : ($carreraActiva ? collect([$carreraActiva]) : $carrerasPreceptor),
+            'carrerasPreceptor' => $carrerasPreceptor,
+            'carreraActiva' => $carreraActiva,
+            'mostrarSelectorCarrera' => $mostrarSelectorCarrera,
             'anios' => Anio::orderBy('anio')->get(),
             'usuarios' => User::orderBy('name')->orderBy('email')->get(),
             'usuariosProfesores' => $usuariosProfesores,
-            'usuariosSinCarrera' => User::whereIn('email', $emailsSinCarrera)
-                ->where(function ($query) {
-                    $query->whereNull('is_admin')->orWhere('is_admin', 0);
-                })
+            'usuariosPreceptores' => $usuariosPreceptores,
+            'preceptoresPorCarrera' => $preceptoresPorCarrera,
+            'usuariosSinCarrera' => $usuariosSinCarreraQuery
                 ->orderBy('name')
                 ->orderBy('email')
                 ->get(),
             'tieneTablaAsignaciones' => $tieneTablaAsignaciones,
             'rolUsuario' => $rolUsuario,
             'adminPuedeCrearAdmins' => $adminPuedeCrearAdmins,
-            'carreraAdminId' => $carreraAdminId,
+            'carreraAdminIds' => $carreraAdminIds,
         ]);
     }
 
@@ -172,7 +325,7 @@ class AsistenciaController extends Controller
         $request->session()->regenerate();
 
         return redirect()
-            ->route('asistencia.index')
+            ->intended(route('asistencia.index'))
             ->with('status', 'Ingresaste correctamente.');
     }
 
@@ -198,6 +351,26 @@ class AsistenciaController extends Controller
         $request->merge(['rol' => 'admin']);
 
         return $this->registrarUsuario($request, true);
+    }
+
+    public function actualizarCarrerasPreceptor(Request $request, User $user)
+    {
+        $this->abortUnlessDirectoraAsistencia();
+
+        if ($this->rolDesdeUsuario($user) !== 'admin' || $this->esDirectoraAsistencia($user)) {
+            abort(404);
+        }
+
+        $data = $request->validate([
+            'carrera_ids' => ['required', 'array', 'min:1'],
+            'carrera_ids.*' => ['required', 'integer', 'distinct', 'exists:carreras,id'],
+        ]);
+
+        $this->sincronizarCarrerasUsuario($user, $data['carrera_ids']);
+
+        return redirect()
+            ->route('asistencia.index', ['admin_tab' => 'usuarios'])
+            ->with('status', 'Se actualizaron las carreras de ' . $user->name . '.');
     }
 
     public function crearAlumno(Request $request)
@@ -288,7 +461,9 @@ class AsistenciaController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'dni' => ['required_if:rol,alumno', 'nullable', 'integer', 'unique:registros,dni'],
             'cuil' => ['required_if:rol,alumno', 'nullable', 'integer', 'unique:registros,cuil'],
-            'carrera_id' => [$permiteAdmin ? 'required_if:rol,admin' : 'nullable', 'nullable', 'exists:carreras,id'],
+            'carrera_id' => ['nullable', 'exists:carreras,id'],
+            'carrera_ids' => [$permiteAdmin ? 'required_if:rol,admin' : 'nullable', 'nullable', 'array', 'min:1'],
+            'carrera_ids.*' => ['integer', 'distinct', 'exists:carreras,id'],
         ]);
 
         if ($data['rol'] === 'alumno' && Schema::hasColumn('users', 'dni') && User::where('dni', $data['dni'])->exists()) {
@@ -316,14 +491,18 @@ class AsistenciaController extends Controller
             $profesor->save();
         }
 
-            $this->crearUsuarioAcceso(
+        $user = $this->crearUsuarioAcceso(
             trim($data['nombre'] . ' ' . ($data['apellido'] ?? '')),
             $data['email'],
             $data['password'],
             $data['rol'],
-            $data['carrera_id'] ?? null,
+            $data['rol'] === 'admin' ? (int) collect($data['carrera_ids'] ?? [])->first() : ($data['carrera_id'] ?? null),
             $data['rol'] === 'alumno' ? (int) $data['dni'] : null
         );
+
+        if ($data['rol'] === 'admin') {
+            $this->sincronizarCarrerasUsuario($user, $data['carrera_ids']);
+        }
 
         return redirect()
             ->route('asistencia.index', $permiteAdmin ? ['admin_tab' => 'usuarios'] : [])
@@ -337,12 +516,23 @@ class AsistenciaController extends Controller
         $data = $request->validate([
             'user_ids' => ['required', 'array', 'min:1'],
             'user_ids.*' => ['exists:users,id'],
+            'carrera_id' => ['required', 'integer', 'exists:carreras,id'],
         ]);
 
+        $carreraId = (int) $data['carrera_id'];
+        $this->asegurarCarreraAdministrable($carreraId);
+        $carrera = Carrera::findOrFail($carreraId);
         $profesoresValidados = 0;
 
         foreach ($data['user_ids'] as $userId) {
             $user = User::findOrFail($userId);
+
+            $esCandidatoProfesor = Registro::where('email', $user->email)
+                ->whereNull('carrera_id')
+                ->exists();
+            if (!$esCandidatoProfesor || in_array((int) $user->is_admin, [1], true)) {
+                abort(403, 'No podés validar este usuario como profesor.');
+            }
 
             if (Schema::hasColumn('users', 'is_admin')) {
                 $user->is_admin = 2;
@@ -352,29 +542,24 @@ class AsistenciaController extends Controller
                 $user->rol = 'Profesor';
             }
 
+            if (Schema::hasColumn('users', 'carrera_id') && !$user->carrera_id) {
+                $user->carrera_id = $carreraId;
+            }
+
             $user->save();
 
-            $nombrePartes = preg_split('/\s+/', trim($user->name), 2);
-            $nombre = $nombrePartes[0] ?? $user->name;
-            $apellido = $nombrePartes[1] ?? 'No informado';
-
-            $existeProfesor = Profesor::where('nombre', $nombre)
-                ->where('apellido', $apellido)
-                ->exists();
-
-            if (!$existeProfesor) {
-                $profesor = new Profesor();
-                $profesor->nombre = $nombre;
-                $profesor->apellido = $apellido;
-                $profesor->save();
+            if (Schema::hasTable('carrera_profesor_user')) {
+                $user->carrerasComoProfesor()->syncWithoutDetaching([$carreraId]);
             }
+
+            $this->profesorDesdeUsuario($user);
 
             $profesoresValidados++;
         }
 
         return redirect()
             ->route('asistencia.index', ['admin_tab' => 'usuarios'])
-            ->with('status', 'Se validaron ' . $profesoresValidados . ' profesor(es).');
+            ->with('status', 'Se validaron ' . $profesoresValidados . ' profesor(es) en ' . $carrera->descripcion . '.');
     }
 
     public function asignarProfesor(Request $request)
@@ -391,11 +576,57 @@ class AsistenciaController extends Controller
         ]);
 
         $materia = Materia::findOrFail($data['materia_id']);
-        $this->actualizarProfesorEnHorario($materia, $data['profesor_id'] ?? null);
+        DB::transaction(function () use ($materia, $data) {
+            Materia::whereKey($materia->id)->lockForUpdate()->firstOrFail();
+            $this->actualizarProfesorEnHorario($materia, $data['profesor_id'] ?? null);
+        });
 
         return redirect()
             ->route('asistencia.index', ['rol' => 'admin'])
             ->with('status', 'Se actualizó el profesor de ' . $materia->descripcion . '.');
+    }
+
+    public function verMateriaAdmin(Materia $materia)
+    {
+        $this->abortUnlessAdmin();
+
+        if (!$this->materiasAdministrablesQuery(Auth::user())->whereKey($materia->id)->exists()) {
+            abort(403, 'No podés consultar materias de otra carrera.');
+        }
+
+        $materia->load(['deCarrera', 'deAnio', 'horario.profesor']);
+        $alumnos = Schema::hasTable('materia_registro')
+            ? $materia->alumnos()->orderBy('apellido')->orderBy('nombre')->get()
+            : collect();
+
+        return view('frontend.asistencia.materia-admin-con-perfiles', [
+            'materia' => $materia,
+            'alumnos' => $alumnos,
+            'tieneTablaAsignaciones' => Schema::hasTable('materia_registro'),
+        ]);
+    }
+
+    public function detallePorcentajeAlumnoAdmin(Materia $materia, Registro $registro)
+    {
+        $this->abortUnlessAdmin();
+
+        if (!$this->materiasAdministrablesQuery(Auth::user())->whereKey($materia->id)->exists()) {
+            abort(403, 'No podés consultar materias de otra carrera.');
+        }
+
+        if (!Schema::hasTable('materia_registro') || !$materia->alumnos()->whereKey($registro->id)->exists()) {
+            abort(404, 'El alumno no está asignado a esta materia.');
+        }
+
+        $materia->load(['deCarrera', 'deAnio', 'horario.profesor']);
+        $historial = $this->historialCompletoAsistencia($materia, $registro);
+        $estadisticas = $this->estadisticasDesdeHistorial($historial);
+        $volverUrl = route('asistencia.admin.materia', $materia);
+        $volverTexto = 'Volver a la materia';
+
+        return view('frontend.asistencia.detalle-porcentaje-alumno-profesor', compact(
+            'materia', 'registro', 'historial', 'estadisticas', 'volverUrl', 'volverTexto'
+        ));
     }
 
     public function asignarMateriasProfesor(Request $request)
@@ -406,37 +637,56 @@ class AsistenciaController extends Controller
             'user_id' => ['required', 'exists:users,id'],
             'materia_ids' => ['nullable', 'array'],
             'materia_ids.*' => ['exists:materias,id'],
+            'carrera_contexto_id' => [
+                $this->esDirectoraAsistencia(Auth::user()) ? 'nullable' : 'required',
+                'integer',
+                'exists:carreras,id',
+            ],
         ]);
 
         $user = User::findOrFail($data['user_id']);
-        $profesor = $this->profesorDesdeUsuario($user);
+        $profesores = $this->profesoresDesdeUsuario($user);
+        $profesor = $profesores->first() ?? $this->profesorDesdeUsuario($user);
+        $profesorIds = $profesores->pluck('id')->push($profesor->id)->unique()->values();
         $materiaIds = collect($data['materia_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values();
-        $materiasAdministrablesIds = $this->materiasAdministrablesQuery(Auth::user())->pluck('id');
+        $materiasAdministrablesQuery = $this->materiasAdministrablesQuery(Auth::user());
+        if (!empty($data['carrera_contexto_id'])) {
+            $this->asegurarCarreraAdministrable((int) $data['carrera_contexto_id']);
+            if (!$this->esDirectoraAsistencia(Auth::user())
+                && !$this->profesorValidadoEnCarrera($user, (int) $data['carrera_contexto_id'])) {
+                abort(403, 'El profesor no está validado en esta carrera.');
+            }
+            $materiasAdministrablesQuery->where('carrera_id', (int) $data['carrera_contexto_id']);
+        }
+        $materiasAdministrablesIds = $materiasAdministrablesQuery->pluck('id');
 
         if ($materiaIds->diff($materiasAdministrablesIds)->isNotEmpty()) {
             abort(403, 'No podés asignar materias de otra carrera.');
         }
 
-        $horariosDelProfesor = Horario::where('profesor_id', $profesor->id)
-            ->whereNotNull('materia_id')
-            ->whereIn('materia_id', $materiasAdministrablesIds);
+        DB::transaction(function () use ($profesorIds, $materiaIds, $materiasAdministrablesIds, $profesor) {
+            $materias = Materia::whereIn('id', $materiaIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
 
-        if ($materiaIds->isNotEmpty()) {
-            $horariosDelProfesor->whereNotIn('materia_id', $materiaIds);
-        }
+            $horariosDelProfesor = Horario::whereIn('profesor_id', $profesorIds)
+                ->whereNotNull('materia_id')
+                ->whereIn('materia_id', $materiasAdministrablesIds);
 
-        $horariosDelProfesor->update(['profesor_id' => null]);
+            if ($materiaIds->isNotEmpty()) {
+                $horariosDelProfesor->whereNotIn('materia_id', $materiaIds);
+            }
 
-        if ($materiaIds->isNotEmpty()) {
-            $materias = Materia::whereIn('id', $materiaIds)->get();
+            $horariosDelProfesor->update(['profesor_id' => null]);
 
             foreach ($materias as $materia) {
                 $this->actualizarProfesorEnHorario($materia, $profesor->id);
             }
-        }
+        });
 
         return redirect()
             ->route('asistencia.index', ['admin_tab' => 'usuarios'])
@@ -551,11 +801,18 @@ class AsistenciaController extends Controller
             ->orderBy('apellido')
             ->orderBy('nombre')
             ->get();
+        $alumnosConAsistencia = Schema::hasTable('asistencias_diarias')
+            ? AsistenciaDiaria::where('materia_id', $materia->id)
+                ->whereIn('registro_id', $alumnosAsignados->pluck('id'))
+                ->distinct()
+                ->pluck('registro_id')
+            : collect();
 
         return view('frontend.asistencia.materia-profesor', [
             'materia' => $materia,
             'alumnosCarrera' => $alumnosCarrera,
             'alumnosAsignados' => $alumnosAsignados,
+            'alumnosConAsistencia' => $alumnosConAsistencia,
             'tieneTablaAsignaciones' => Schema::hasTable('materia_registro'),
         ]);
     }
@@ -568,7 +825,13 @@ class AsistenciaController extends Controller
             abort(404, 'El alumno no está asignado a esta materia.');
         }
 
-        $materia->alumnos()->detach($registro->id);
+        DB::transaction(function () use ($materia, $registro) {
+            AsistenciaDiaria::where('materia_id', $materia->id)
+                ->where('registro_id', $registro->id)
+                ->delete();
+
+            $materia->alumnos()->detach($registro->id);
+        });
 
         return redirect()
             ->route('asistencia.profesor.materia', $materia)
@@ -584,13 +847,125 @@ class AsistenciaController extends Controller
         return view('frontend.asistencia.listado-materia-profesor', compact('materia', 'alumnosAsignados'));
     }
 
+    public function porcentajesMateriaProfesor(Materia $materia)
+    {
+        $this->autorizarMateriaProfesor($materia);
+        $materia->load(['deCarrera', 'deAnio', 'horario.profesor']);
+
+        $alumnos = $materia->alumnos()
+            ->orderBy('apellido')
+            ->orderBy('nombre')
+            ->get();
+        $asistenciasPorAlumno = AsistenciaDiaria::where('materia_id', $materia->id)
+            ->whereIn('registro_id', $alumnos->pluck('id'))
+            ->get()
+            ->groupBy('registro_id');
+        $clasesTotalesMateria = AsistenciaDiaria::where('materia_id', $materia->id)
+            ->distinct()
+            ->count('fecha');
+
+        $porcentajes = $alumnos->map(function ($alumno) use ($asistenciasPorAlumno, $clasesTotalesMateria) {
+            $historial = $asistenciasPorAlumno->get($alumno->id, collect());
+            $clasesTotales = $clasesTotalesMateria;
+            $presencias = $historial->sum(function ($asistencia) {
+                if ($asistencia->estado === 'presente') {
+                    return 1;
+                }
+
+                return $asistencia->estado === 'tarde' ? 0.5 : 0;
+            });
+            $faltasJustificadas = $historial->where('estado', 'justificado');
+            $justificadasPorEnfermedad = $faltasJustificadas
+                ->where('motivo_justificacion', 'enfermedad')
+                ->count();
+            $justificadasPorTrabajo = $faltasJustificadas
+                ->where('motivo_justificacion', 'trabajo')
+                ->count();
+
+            return [
+                'alumno' => $alumno,
+                'presencias' => $presencias,
+                'clases_totales' => $clasesTotales,
+                'faltas_justificadas' => $faltasJustificadas->count(),
+                'justificadas_enfermedad' => $justificadasPorEnfermedad,
+                'justificadas_trabajo' => $justificadasPorTrabajo,
+                'porcentaje' => $clasesTotales > 0 ? ($presencias / $clasesTotales) * 100 : 0,
+            ];
+        });
+
+        return view('frontend.asistencia.porcentajes-materia-profesor', compact('materia', 'porcentajes'));
+    }
+
+    public function detallePorcentajeAlumnoProfesor(Materia $materia, Registro $registro)
+    {
+        $this->autorizarMateriaProfesor($materia);
+
+        if (!$materia->alumnos()->whereKey($registro->id)->exists()) {
+            abort(404, 'El alumno no está asignado a esta materia.');
+        }
+
+        $materia->load(['deCarrera', 'deAnio', 'horario.profesor']);
+        $historial = $this->historialCompletoAsistencia($materia, $registro);
+        $estadisticas = $this->estadisticasDesdeHistorial($historial);
+
+        $volverUrl = route('asistencia.profesor.materia.porcentajes', $materia);
+        $volverTexto = 'Volver a porcentajes';
+
+        return view('frontend.asistencia.detalle-porcentaje-alumno-profesor', compact(
+            'materia', 'registro', 'historial', 'estadisticas', 'volverUrl', 'volverTexto'
+        ));
+    }
+
     public function planillaDiariaProfesor(Request $request, Materia $materia)
     {
         $this->autorizarMateriaProfesor($materia);
 
-        $fecha = $request->validate([
+        $fechaSolicitada = $request->validate([
             'fecha' => ['nullable', 'date', 'before_or_equal:today'],
-        ])['fecha'] ?? now()->toDateString();
+        ])['fecha'] ?? null;
+
+        $diasPermitidos = Horario::where('materia_id', $materia->id)
+            ->whereIn('profesor_id', $this->profesoresDesdeUsuario(Auth::user())->pluck('id'))
+            ->whereNotNull('dia')
+            ->pluck('dia')
+            ->map(fn ($dia) => (int) $dia)
+            ->unique()
+            ->sort()
+            ->values();
+
+        if ($diasPermitidos->isEmpty()) {
+            abort(422, 'La materia no tiene un día de cursada configurado.');
+        }
+
+        $nombresDias = [1 => 'lunes', 2 => 'martes', 3 => 'miércoles', 4 => 'jueves', 5 => 'viernes', 6 => 'sábado', 7 => 'domingo'];
+        $fechasConAsistencia = AsistenciaDiaria::where('materia_id', $materia->id)
+            ->whereDate('fecha', '<', now()->toDateString())
+            ->select('fecha')
+            ->distinct()
+            ->orderByDesc('fecha')
+            ->pluck('fecha')
+            ->map(fn ($fechaGuardada) => Carbon::parse($fechaGuardada))
+            ->filter(fn (Carbon $fechaGuardada) => $diasPermitidos->contains($fechaGuardada->dayOfWeekIso));
+
+        $fechasDisponibles = collect();
+        if ($diasPermitidos->contains(now()->dayOfWeekIso)) {
+            $fechasDisponibles->push(now()->startOfDay());
+        }
+        $fechasDisponibles = $fechasDisponibles
+            ->concat($fechasConAsistencia)
+            ->unique(fn (Carbon $fechaDisponible) => $fechaDisponible->toDateString())
+            ->map(fn (Carbon $fechaDisponible) => [
+                'valor' => $fechaDisponible->toDateString(),
+                'etiqueta' => ucfirst($nombresDias[$fechaDisponible->dayOfWeekIso]) . ' ' . $fechaDisponible->format('d/m/Y') . ($fechaDisponible->isToday() ? ' (hoy)' : ''),
+            ])
+            ->values();
+
+        $fecha = $fechaSolicitada ?? data_get($fechasDisponibles->first(), 'valor');
+        if (!$fecha || !$fechasDisponibles->contains('valor', $fecha)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'fecha' => 'La fecha seleccionada no tiene una asistencia registrada para esta materia.',
+            ]);
+        }
 
         $materia->load(['deCarrera', 'deAnio', 'horario.profesor']);
         $alumnos = $materia->alumnos()->orderBy('apellido')->orderBy('nombre')->get();
@@ -599,9 +974,20 @@ class AsistenciaController extends Controller
             ->get()
             ->keyBy('registro_id');
         $planillaCerrada = $asistencias->isNotEmpty();
+        $planillaEditable = $fecha === now()->toDateString();
+        $codigoQr = $planillaEditable
+            ? CodigoQrAsistencia::where('materia_id', $materia->id)
+                ->whereDate('fecha', $fecha)
+                ->latest('id')
+                ->first()
+            : null;
+        $qrAsistenciaUrl = $codigoQr
+            ? route('asistencia.qr.registrar', ['token' => $codigoQr->token])
+            : null;
 
         return view('frontend.asistencia.planilla-diaria-profesor', compact(
-            'materia', 'alumnos', 'asistencias', 'fecha', 'planillaCerrada'
+            'materia', 'alumnos', 'asistencias', 'fecha', 'planillaCerrada', 'planillaEditable',
+            'diasPermitidos', 'nombresDias', 'fechasDisponibles', 'codigoQr', 'qrAsistenciaUrl'
         ));
     }
 
@@ -616,11 +1002,28 @@ class AsistenciaController extends Controller
             'asistencias.*.motivo_justificacion' => ['nullable', Rule::in(['enfermedad', 'trabajo'])],
         ]);
 
-        if (AsistenciaDiaria::where('materia_id', $materia->id)->whereDate('fecha', $data['fecha'])->exists()) {
+        $diasPermitidos = Horario::where('materia_id', $materia->id)
+            ->whereIn('profesor_id', $this->profesoresDesdeUsuario(Auth::user())->pluck('id'))
+            ->whereNotNull('dia')
+            ->pluck('dia')
+            ->map(fn ($dia) => (int) $dia)
+            ->unique();
+
+        if (!$diasPermitidos->contains(Carbon::parse($data['fecha'])->dayOfWeekIso)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'fecha' => 'La asistencia de esta fecha ya fue guardada y no se puede modificar.',
+                'fecha' => 'Solo se puede tomar asistencia el día de cursada correspondiente a esta materia.',
             ]);
         }
+
+        if ($data['fecha'] !== now()->toDateString()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'fecha' => 'Las asistencias de días anteriores son únicamente de lectura.',
+            ]);
+        }
+
+        $planillaYaExistia = AsistenciaDiaria::where('materia_id', $materia->id)
+            ->whereDate('fecha', $data['fecha'])
+            ->exists();
 
         $asistencias = collect($data['asistencias'] ?? []);
 
@@ -641,10 +1044,11 @@ class AsistenciaController extends Controller
 
         DB::transaction(function () use ($materia, $data, $asistencias) {
             foreach ($asistencias as $registroId => $valores) {
-                AsistenciaDiaria::create([
+                AsistenciaDiaria::updateOrCreate([
                     'materia_id' => $materia->id,
                     'registro_id' => (int) $registroId,
                     'fecha' => $data['fecha'],
+                ], [
                     'estado' => $valores['estado'],
                     'motivo_justificacion' => $valores['estado'] === 'justificado'
                         ? $valores['motivo_justificacion']
@@ -655,7 +1059,9 @@ class AsistenciaController extends Controller
 
         return redirect()
             ->route('asistencia.profesor.materia.planilla', ['materia' => $materia, 'fecha' => $data['fecha']])
-            ->with('status', 'La asistencia del día se guardó correctamente.');
+            ->with('status', $planillaYaExistia
+                ? 'La asistencia del día se actualizó correctamente.'
+                : 'La asistencia del día se guardó correctamente.');
     }
 
     public function perfilAlumnoProfesor(Registro $registro)
@@ -680,6 +1086,132 @@ class AsistenciaController extends Controller
         return view('frontend.asistencia.perfil-alumno-profesor', compact('registro', 'materiasAlumno'));
     }
 
+    public function generarQrAsistencia(Request $request, Materia $materia)
+    {
+        $this->autorizarMateriaProfesor($materia);
+        $data = $request->validate([
+            'fecha' => ['required', 'date', 'before_or_equal:today'],
+            'tipo' => ['required', Rule::in(['presente', 'tarde'])],
+        ]);
+
+        if ($data['fecha'] !== now()->toDateString()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'fecha' => 'Solo se puede generar un código QR para la clase de hoy.',
+            ]);
+        }
+
+        DB::transaction(function () use ($materia, $data) {
+            CodigoQrAsistencia::where('materia_id', $materia->id)
+                ->whereDate('fecha', $data['fecha'])
+                ->update(['habilitado' => false]);
+
+            CodigoQrAsistencia::create([
+                'materia_id' => $materia->id,
+                'user_id' => Auth::id(),
+                'fecha' => $data['fecha'],
+                'token' => Str::random(64),
+                'tipo' => $data['tipo'],
+                'habilitado' => true,
+            ]);
+        });
+
+        return redirect()
+            ->route('asistencia.profesor.materia.planilla', ['materia' => $materia, 'fecha' => $data['fecha']])
+            ->with('status', 'Se generó y habilitó un nuevo código QR.');
+    }
+
+    public function cambiarEstadoQrAsistencia(Materia $materia, CodigoQrAsistencia $codigoQr)
+    {
+        $this->autorizarMateriaProfesor($materia);
+
+        if ((int) $codigoQr->materia_id !== (int) $materia->id || !$codigoQr->fecha->isToday()) {
+            abort(404);
+        }
+
+        $codigoQr->habilitado = !$codigoQr->habilitado;
+        $codigoQr->save();
+
+        return redirect()
+            ->route('asistencia.profesor.materia.planilla', ['materia' => $materia, 'fecha' => $codigoQr->fecha->toDateString()])
+            ->with('status', $codigoQr->habilitado ? 'El código QR fue habilitado.' : 'El código QR fue inhabilitado.');
+    }
+
+    public function registrarAsistenciaPorQr(Request $request, string $token)
+    {
+        $codigoQr = CodigoQrAsistencia::where('token', $token)->firstOrFail();
+
+        if (!$codigoQr->habilitado || !$codigoQr->fecha->isToday()) {
+            abort(403, 'El código QR está inhabilitado o ya no corresponde a la clase de hoy.');
+        }
+
+        if (!Auth::check()) {
+            return redirect()->guest(route('asistencia.index'))
+                ->with('status', 'Iniciá sesión como alumno para registrar tu asistencia.');
+        }
+
+        if ($this->rolDesdeUsuario(Auth::user()) !== 'alumno' || !Schema::hasTable('materia_registro')) {
+            abort(403, 'Solo los alumnos pueden registrar asistencia mediante el código QR.');
+        }
+
+        $materia = $codigoQr->materia;
+        $registro = $this->registroDesdeUsuario(Auth::user());
+        if (!$registro || !$registro->materias()->whereKey($materia->id)->exists()) {
+            abort(403, 'No estás asignado a esta materia.');
+        }
+
+        AsistenciaDiaria::updateOrCreate([
+            'materia_id' => $materia->id,
+            'registro_id' => $registro->id,
+            'fecha' => $codigoQr->fecha->toDateString(),
+        ], [
+            'estado' => $codigoQr->tipo,
+            'motivo_justificacion' => null,
+        ]);
+
+        return redirect()
+            ->route('asistencia.alumno.materia', $materia)
+            ->with('status', 'Tu asistencia se registró correctamente como ' . ($codigoQr->tipo === 'tarde' ? 'tardanza.' : 'presente.'));
+    }
+
+    public function registrarAsistenciaPorQrAnterior(Request $request, Materia $materia)
+    {
+        if (!$request->hasValidSignature()) {
+            abort(403, 'El código QR no es válido o ya venció.');
+        }
+
+        if (!Auth::check()) {
+            return redirect()->guest(route('asistencia.index'))
+                ->with('status', 'Iniciá sesión como alumno para registrar tu asistencia.');
+        }
+
+        if ($this->rolDesdeUsuario(Auth::user()) !== 'alumno' || !Schema::hasTable('materia_registro')) {
+            abort(403, 'Solo los alumnos pueden registrar asistencia mediante el código QR.');
+        }
+
+        $registro = $this->registroDesdeUsuario(Auth::user());
+        if (!$registro || !$registro->materias()->whereKey($materia->id)->exists()) {
+            abort(403, 'No estás asignado a esta materia.');
+        }
+
+        $fecha = $request->query('fecha');
+        if (!$fecha || $fecha !== now()->toDateString()) {
+            abort(403, 'Este código QR ya no corresponde a la clase de hoy.');
+        }
+
+        AsistenciaDiaria::updateOrCreate([
+            'materia_id' => $materia->id,
+            'registro_id' => $registro->id,
+            'fecha' => $fecha,
+        ], [
+            'estado' => 'presente',
+            'motivo_justificacion' => null,
+        ]);
+
+        return redirect()
+            ->route('asistencia.alumno.materia', $materia)
+            ->with('status', 'Tu asistencia se registró correctamente.');
+    }
+
     public function verMateriaAlumno(Materia $materia)
     {
         if ($this->rolDesdeUsuario(Auth::user()) !== 'alumno' || !Schema::hasTable('materia_registro')) {
@@ -692,8 +1224,15 @@ class AsistenciaController extends Controller
         }
 
         $materia->load(['deCarrera', 'deAnio', 'horario.profesor']);
+        $registro = $registroAlumno;
+        $historial = $this->historialCompletoAsistencia($materia, $registro);
+        $estadisticas = $this->estadisticasDesdeHistorial($historial);
+        $volverUrl = route('asistencia.index');
+        $volverTexto = 'Volver a mis materias';
 
-        return view('frontend.asistencia.materia-alumno', compact('materia'));
+        return view('frontend.asistencia.detalle-porcentaje-alumno-profesor', compact(
+            'materia', 'registro', 'historial', 'estadisticas', 'volverUrl', 'volverTexto'
+        ));
     }
 
     public function actualizarCarrera(Request $request, Carrera $carrera)
@@ -746,6 +1285,70 @@ class AsistenciaController extends Controller
         return redirect()
             ->route('asistencia.index', ['rol' => 'admin', 'admin_tab' => 'carreras'])
             ->with('status', 'Se actualizó la materia ' . $materia->descripcion . '.');
+    }
+
+    private function historialCompletoAsistencia(Materia $materia, Registro $registro)
+    {
+        $historialRegistrado = AsistenciaDiaria::where('materia_id', $materia->id)
+            ->where('registro_id', $registro->id)
+            ->get()
+            ->keyBy(fn ($asistencia) => $asistencia->fecha->toDateString());
+
+        return AsistenciaDiaria::where('materia_id', $materia->id)
+            ->select('fecha')
+            ->distinct()
+            ->orderByDesc('fecha')
+            ->pluck('fecha')
+            ->map(function ($fecha) use ($materia, $registro, $historialRegistrado) {
+                $fechaClase = Carbon::parse($fecha)->toDateString();
+                $asistencia = $historialRegistrado->get($fechaClase);
+
+                if ($asistencia) {
+                    return $asistencia;
+                }
+
+                $ausencia = new AsistenciaDiaria([
+                    'materia_id' => $materia->id,
+                    'registro_id' => $registro->id,
+                    'fecha' => $fechaClase,
+                    'estado' => 'ausente',
+                    'motivo_justificacion' => null,
+                ]);
+                $ausencia->setAttribute('es_ausencia_automatica', true);
+
+                return $ausencia;
+            });
+    }
+
+    private function estadisticasDesdeHistorial($historial): array
+    {
+        $presentes = $historial->where('estado', 'presente')->count();
+        $ausentes = $historial->where('estado', 'ausente')->count();
+        $tardanzas = $historial->where('estado', 'tarde')->count();
+        $justificadas = $historial->where('estado', 'justificado');
+        $clasesTotales = $historial->count();
+        $presencias = $presentes + ($tardanzas * 0.5);
+
+        return [
+            'presentes' => $presentes,
+            'ausentes' => $ausentes,
+            'tardanzas' => $tardanzas,
+            'justificadas' => $justificadas->count(),
+            'justificadas_enfermedad' => $justificadas->where('motivo_justificacion', 'enfermedad')->count(),
+            'justificadas_trabajo' => $justificadas->where('motivo_justificacion', 'trabajo')->count(),
+            'clases_totales' => $clasesTotales,
+            'presencias' => $presencias,
+            'porcentaje' => $clasesTotales > 0 ? ($presencias / $clasesTotales) * 100 : 0,
+        ];
+    }
+
+    private function esMateriaPractica(Materia $materia): bool
+    {
+        $descripcion = Str::lower(Str::ascii((string) $materia->descripcion));
+        $descripcion = trim(preg_replace('/\s+/', ' ', $descripcion));
+
+        return Str::contains($descripcion, ['practica', 'practicas'])
+            || preg_match('/^pp(?:\s*\d|:|\s|$)/', $descripcion) === 1;
     }
 
     private function validarDatosAlumno(Request $request, ?Registro $registro = null): array
@@ -802,7 +1405,7 @@ class AsistenciaController extends Controller
 
     private function asegurarCarreraAdministrable(int $carreraId): void
     {
-        if (!$this->esDirectoraAsistencia(Auth::user()) && $carreraId !== $this->carreraIdUsuario(Auth::user())) {
+        if (!$this->esDirectoraAsistencia(Auth::user()) && !$this->carreraIdsUsuario(Auth::user())->contains($carreraId)) {
             abort(403, 'No podés administrar alumnos de otra carrera.');
         }
     }
@@ -913,12 +1516,7 @@ class AsistenciaController extends Controller
         $nombreNormalizado = $this->normalizarTexto($nombre);
         $apellidoNormalizado = $this->normalizarTexto($apellido);
 
-        $profesorIdsDesdeHorarios = Horario::whereNotNull('profesor_id')
-            ->select('profesor_id')
-            ->distinct();
-
-        return Profesor::whereIn('id', $profesorIdsDesdeHorarios)
-            ->get()
+        $profesores = Profesor::all()
             ->filter(function ($profesor) use ($nombreCompleto, $nombreNormalizado, $apellidoNormalizado) {
                 $profesorNombre = $this->normalizarTexto($profesor->nombre);
                 $profesorApellido = $this->normalizarTexto($profesor->apellido);
@@ -929,6 +1527,25 @@ class AsistenciaController extends Controller
                     || ($profesorNombre === $apellidoNormalizado && $profesorApellido === $nombreNormalizado)
                     || $ordenNombreApellido === $nombreCompleto
                     || $ordenApellidoNombre === $nombreCompleto;
+            })
+            ->values();
+
+        if ($profesores->isEmpty()) {
+            return $profesores;
+        }
+
+        $cantidadMaterias = Horario::whereIn('profesor_id', $profesores->pluck('id'))
+            ->whereNotNull('materia_id')
+            ->selectRaw('profesor_id, COUNT(DISTINCT materia_id) as total')
+            ->groupBy('profesor_id')
+            ->pluck('total', 'profesor_id');
+
+        return $profesores
+            ->sort(function ($profesorA, $profesorB) use ($cantidadMaterias) {
+                $comparacion = ((int) ($cantidadMaterias[$profesorB->id] ?? 0))
+                    <=> ((int) ($cantidadMaterias[$profesorA->id] ?? 0));
+
+                return $comparacion !== 0 ? $comparacion : $profesorA->id <=> $profesorB->id;
             })
             ->values();
     }
@@ -1043,13 +1660,80 @@ class AsistenciaController extends Controller
         return $user && strtolower((string) $user->email) === 'admin.asistencia@isft38.test';
     }
 
-    private function carreraIdUsuario(?User $user): ?int
+    private function carreraIdsUsuario(?User $user)
     {
-        if (!$user || !Schema::hasColumn('users', 'carrera_id')) {
-            return null;
+        if (!$user) {
+            return collect();
         }
 
-        return $user->carrera_id ? (int) $user->carrera_id : null;
+        if (Schema::hasTable('carrera_user')) {
+            return DB::table('carrera_user')
+                ->where('user_id', $user->id)
+                ->pluck('carrera_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+        }
+
+        return Schema::hasColumn('users', 'carrera_id') && $user->carrera_id
+            ? collect([(int) $user->carrera_id])
+            : collect();
+    }
+
+    private function profesorValidadoEnCarrera(User $user, int $carreraId): bool
+    {
+        if (Schema::hasTable('carrera_profesor_user')) {
+            return DB::table('carrera_profesor_user')
+                ->where('user_id', $user->id)
+                ->where('carrera_id', $carreraId)
+                ->exists();
+        }
+
+        return Schema::hasColumn('users', 'carrera_id')
+            && (int) $user->carrera_id === $carreraId;
+    }
+
+    private function sincronizarCarrerasUsuario(User $user, array $carreraIds): void
+    {
+        $carreraIds = collect($carreraIds)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        DB::transaction(function () use ($user, $carreraIds) {
+            Carrera::whereIn('id', $carreraIds)->orderBy('id')->lockForUpdate()->get();
+
+            $preceptoresSustituidos = collect();
+            if (Schema::hasTable('carrera_user') && $carreraIds->isNotEmpty()) {
+                $preceptoresSustituidos = DB::table('carrera_user')
+                    ->whereIn('carrera_id', $carreraIds)
+                    ->where('user_id', '!=', $user->id)
+                    ->pluck('user_id')
+                    ->unique();
+
+                DB::table('carrera_user')
+                    ->whereIn('carrera_id', $carreraIds)
+                    ->where('user_id', '!=', $user->id)
+                    ->delete();
+            }
+
+            if (Schema::hasTable('carrera_user')) {
+                $user->carrerasAdministradas()->sync($carreraIds->all());
+            }
+
+            if (Schema::hasColumn('users', 'carrera_id')) {
+                $user->carrera_id = $carreraIds->first();
+                $user->save();
+
+                foreach ($preceptoresSustituidos as $preceptorId) {
+                    $primeraCarrera = DB::table('carrera_user')
+                        ->where('user_id', $preceptorId)
+                        ->orderBy('carrera_id')
+                        ->value('carrera_id');
+                    User::whereKey($preceptorId)->update(['carrera_id' => $primeraCarrera]);
+                }
+            }
+        });
     }
 
     private function materiasAdministrablesQuery(?User $user)
@@ -1057,7 +1741,7 @@ class AsistenciaController extends Controller
         $query = Materia::whereIn('id', Horario::whereNotNull('materia_id')->select('materia_id'));
 
         if ($this->rolDesdeUsuario($user) === 'admin' && !$this->esDirectoraAsistencia($user)) {
-            $query->where('carrera_id', $this->carreraIdUsuario($user));
+            $query->whereIn('carrera_id', $this->carreraIdsUsuario($user));
         }
 
         return $query;

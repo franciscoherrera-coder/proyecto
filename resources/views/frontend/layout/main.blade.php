@@ -68,6 +68,20 @@ nav.navbar {
   z-index: 10;
 }
 
+.btn-cerrar-sesion,
+form[action*="/asistencia/logout"] button {
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.btn-cerrar-sesion:hover,
+.btn-cerrar-sesion:focus-visible,
+form[action*="/asistencia/logout"] button:hover,
+form[action*="/asistencia/logout"] button:focus-visible {
+  background-color: #dc3545 !important;
+  border-color: #dc3545 !important;
+  color: #ffffff !important;
+}
+
 .footer {
   color: white;
   text-align: center;
@@ -262,7 +276,7 @@ a:after {
     <nav class="navbar sticky-top navbar-light bg-white navbar-expand-lg m-auto">
     <div class="container-fluid">
       <a href="{{ route('inicio') }}" class="d-flex align-items-center my-2 my-lg-0 me-lg-auto text-white text-decoration-none">
-        <img src="logo1.png" width="40px" alt="Logo ISFT38" />
+        <img src="{{ asset('logo1.png') }}" width="40px" alt="Logo ISFT38" />
       </a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarToggleExternalContent" aria-controls="navbarToggleExternalContent" aria-expanded="false" aria-label="Toggle navigation">
         <span class="navbar-toggler-icon"></span>

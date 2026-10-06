@@ -105,6 +105,7 @@
                         </div>
                         <div class="d-flex flex-wrap gap-2">
                             <a class="btn btn-primary" href="{{ route('asistencia.profesor.materia.planilla', $materia) }}">Tomar asistencia diaria</a>
+                            <a class="btn btn-outline-primary" href="{{ route('asistencia.profesor.materia.porcentajes', $materia) }}">Porcentaje de asistencia</a>
                             <a class="btn btn-outline-primary" target="_blank" href="{{ route('asistencia.profesor.materia.listado', $materia) }}">Generar listado imprimible</a>
                         </div>
                     </div>
@@ -116,7 +117,7 @@
                                     <strong>{{ $alumno->apellido }}, {{ $alumno->nombre }}</strong>
                                     <span class="d-block small text-muted">DNI {{ $alumno->dni }} · {{ $alumno->email }}</span>
                                 </a>
-                                <form action="{{ route('asistencia.profesor.materia.alumno.quitar', [$materia, $alumno]) }}" method="POST" class="m-0">
+                                <form action="{{ route('asistencia.profesor.materia.alumno.quitar', [$materia, $alumno]) }}" method="POST" class="m-0 js-quitar-alumno" data-tiene-asistencias="{{ $alumnosConAsistencia->contains($alumno->id) ? '1' : '0' }}">
                                     @csrf
                                     @method('DELETE')
                                     <button class="btn btn-outline-danger btn-sm" type="submit">Eliminar</button>
@@ -132,8 +133,70 @@
     </div>
 </main>
 
+<div class="modal fade" id="confirmarEliminacionAlumno" tabindex="-1" aria-labelledby="confirmarEliminacionTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmarEliminacionTitulo">Eliminar alumno</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmarEliminacionMensaje" class="mb-0">¿Eliminar a este alumno de la materia?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmarEliminacionBoton">Sí, continuar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const modalElement = document.getElementById('confirmarEliminacionAlumno');
+    const modalEliminacion = new bootstrap.Modal(modalElement);
+    const mensajeEliminacion = document.getElementById('confirmarEliminacionMensaje');
+    const botonConfirmarEliminacion = document.getElementById('confirmarEliminacionBoton');
+    let formularioPendiente = null;
+    let pasoConfirmacion = 1;
+
+    document.querySelectorAll('.js-quitar-alumno').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            formularioPendiente = form;
+            pasoConfirmacion = 1;
+            mensajeEliminacion.textContent = '¿Eliminar a este alumno de la materia?';
+            botonConfirmarEliminacion.textContent = 'Sí, continuar';
+            modalEliminacion.show();
+        });
+    });
+
+    botonConfirmarEliminacion.addEventListener('click', function () {
+        if (pasoConfirmacion === 1) {
+            if (formularioPendiente && formularioPendiente.dataset.tieneAsistencias !== '1') {
+                botonConfirmarEliminacion.disabled = true;
+                formularioPendiente.submit();
+                return;
+            }
+
+            pasoConfirmacion = 2;
+            mensajeEliminacion.textContent = 'Se borrará todo el historial de asistencia del alumno de la materia. ¿Está seguro?';
+            botonConfirmarEliminacion.textContent = 'Sí, eliminar';
+            return;
+        }
+
+        if (formularioPendiente) {
+            botonConfirmarEliminacion.disabled = true;
+            formularioPendiente.submit();
+        }
+    });
+
+    modalElement.addEventListener('hidden.bs.modal', function () {
+        formularioPendiente = null;
+        pasoConfirmacion = 1;
+        botonConfirmarEliminacion.disabled = false;
+    });
+
     const input = document.getElementById('buscar_alumno_materia');
     const rows = document.querySelectorAll('.js-alumno-materia');
     const empty = document.getElementById('sin_resultados_alumnos');
