@@ -20,36 +20,6 @@
         padding: 48px 0;
     }
 
-    .asistencia-hero {
-        background: #ffffff;
-        border: 1px solid #e4e7eb;
-        border-radius: 8px;
-        padding: 28px;
-        box-shadow: 0 10px 30px rgba(31, 41, 51, 0.08);
-    }
-
-    .asistencia-kicker {
-        color: #700101;
-        font-size: 0.78rem;
-        font-weight: 800;
-        letter-spacing: 0;
-        text-transform: uppercase;
-    }
-
-    .asistencia-title {
-        color: #111827;
-        font-size: clamp(2rem, 5vw, 3.3rem);
-        font-weight: 800;
-        line-height: 1.05;
-        margin: 8px 0 12px;
-    }
-
-    .asistencia-copy {
-        color: #52606d;
-        font-size: 1.05rem;
-        max-width: 760px;
-    }
-
     .role-selector {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -760,7 +730,6 @@
             padding: 24px 0;
         }
 
-        .asistencia-hero,
         .dashboard-body {
             padding: 18px;
         }
@@ -799,22 +768,14 @@
 
 <main class="asistencia-page">
     <div class="container">
-        @guest
-        <section class="asistencia-hero">
-            <div class="asistencia-kicker">Acceso requerido</div>
-            <h1 class="asistencia-title">Sistema de asistencia</h1>
-            <p class="asistencia-copy">
-                Iniciá sesión para entrar al panel de asistencia o registrate para pedir un acceso como alumno, profesor o admin.
-            </p>
-        </section>
-        @else
+        @auth
             <div class="d-flex justify-content-end">
                 <form action="{{ route('asistencia.logout') }}" method="POST" class="m-0">
                     @csrf
                     <button class="asistencia-btn secondary btn-cerrar-sesion" type="submit">Cerrar sesión</button>
                 </form>
             </div>
-        @endguest
+        @endauth
 
         @if ($errors->any())
             <div class="alert alert-danger mt-4">

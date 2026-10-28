@@ -599,9 +599,35 @@ class AsistenciaController extends Controller
             ? $materia->alumnos()->orderBy('apellido')->orderBy('nombre')->get()
             : collect();
 
+        $asistenciasPorAlumno = collect();
+        $clasesTotales = 0;
+
+        if (Schema::hasTable('asistencias_diarias') && $alumnos->isNotEmpty()) {
+            $asistenciasPorAlumno = AsistenciaDiaria::where('materia_id', $materia->id)
+                ->whereIn('registro_id', $alumnos->pluck('id'))
+                ->get()
+                ->groupBy('registro_id');
+            $clasesTotales = AsistenciaDiaria::where('materia_id', $materia->id)
+                ->distinct()
+                ->count('fecha');
+        }
+
+        $estadisticasAlumnos = $alumnos->mapWithKeys(function ($alumno) use ($asistenciasPorAlumno, $clasesTotales) {
+            $historial = $asistenciasPorAlumno->get($alumno->id, collect());
+            $presencias = $historial->where('estado', 'presente')->count()
+                + ($historial->where('estado', 'tarde')->count() * 0.5);
+
+            return [$alumno->id => [
+                'presencias' => $presencias,
+                'clases_totales' => $clasesTotales,
+                'porcentaje' => $clasesTotales > 0 ? ($presencias / $clasesTotales) * 100 : 0,
+            ]];
+        });
+
         return view('frontend.asistencia.materia-admin-con-perfiles', [
             'materia' => $materia,
             'alumnos' => $alumnos,
+            'estadisticasAlumnos' => $estadisticasAlumnos,
             'tieneTablaAsignaciones' => Schema::hasTable('materia_registro'),
         ]);
     }

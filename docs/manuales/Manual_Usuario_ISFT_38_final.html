@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Manual de Usuario - Sistema de Asistencia ISFT N.° 38</title>
+<style>
+@page { margin: 24mm 18mm 22mm 18mm; }
+body { font-family: DejaVu Sans, sans-serif; color: #24324a; font-size: 10.2pt; line-height: 1.42; }
+h1 { color: #163a63; font-size: 22pt; margin: 0 0 12px; border-bottom: 3px solid #21a366; padding-bottom: 7px; }
+h2 { color: #163a63; font-size: 15pt; margin: 17px 0 7px; }
+h3 { color: #176b49; font-size: 11.5pt; margin: 13px 0 5px; }
+p { margin: 5px 0 8px; text-align: justify; }
+ul, ol { margin: 5px 0 9px 20px; }
+li { margin-bottom: 4px; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0 13px; font-size: 8.8pt; }
+th { background: #163a63; color: #fff; text-align: left; padding: 6px; }
+td { border: 1px solid #c7d0dc; padding: 6px; vertical-align: top; }
+.meta td:first-child { width: 29%; font-weight: bold; background: #eef3f7; }
+.note, .warning, .success { padding: 9px 11px; margin: 10px 0; border-left: 4px solid; background: #f3f7fa; }
+.note { border-color: #2b78c5; }.warning { border-color: #e49b19; background: #fff8e8; }.success { border-color: #21a366; background: #eefaf4; }
+.shot { width: 100%; max-height: 125mm; object-fit: contain; border: 1px solid #b8c4d0; margin: 7px 0 3px; }
+.caption { color: #5d6978; font-size: 8.2pt; text-align: center; margin-bottom: 10px; }
+.page { page-break-before: always; }
+.compact td { padding: 4px 5px; }
+.toc td { border: 0; border-bottom: 1px dotted #aeb8c5; padding: 5px 2px; }
+.small { font-size: 8.5pt; color: #566273; }
+</style>
+</head>
+<body>
+<h1>Manual de Usuario</h1>
+<h2>Sistema de Asistencia del ISFT N.° 38</h2>
+<table class="meta">
+<tr><td>Versión del sistema</td><td>4.0</td></tr>
+<tr><td>Fecha</td><td>28 de octubre de 2026</td></tr>
+<tr><td>Institución</td><td>Instituto Superior de Formación Técnica N.° 38</td></tr>
+<tr><td>Responsable</td><td>Francisco Herrera</td></tr>
+</table>
+<h2>Cómo utilizar esta guía</h2>
+<p>Lea primero “Acceso y primeros pasos” y luego vaya al capítulo de su rol. Cada procedimiento indica la tarea, los pasos y el resultado que debe observar. Los nombres de botones aparecen tal como se muestran en pantalla.</p>
+<div class="note"><b>Documentación relacionada:</b> Manual del Desarrollador — Sistema de Asistencia.</div>
+<h2>Índice</h2>
+<table class="toc compact">
+<tr><td>1. Presentación y alcance</td><td>2. Perfiles de usuario</td></tr>
+<tr><td>3. Requisitos, acceso y registro</td><td>4. Interfaz y primeros pasos</td></tr>
+<tr><td>5. Alumno</td><td>6. Profesor</td></tr>
+<tr><td>7. Preceptor</td><td>8. Directora de asistencia</td></tr>
+<tr><td>9. Mensajes y resolución de problemas</td><td>10. Preguntas frecuentes</td></tr>
+<tr><td>11. Glosario</td><td>12. Soporte y consulta rápida</td></tr>
+</table>
+
+<div class="page"></div><h1>1. Presentación y alcance</h1>
+<p>El Sistema de Asistencia es un módulo web integrado al portal del ISFT N.° 38. Centraliza alumnos, materias, planillas diarias, códigos QR e indicadores de asistencia. Reduce el uso de planillas separadas y permite que cada persona vea únicamente la información correspondiente a su función.</p>
+<h2>¿Qué problema resuelve?</h2>
+<table><tr><th>Necesidad</th><th>Respuesta del sistema</th></tr>
+<tr><td>Registrar una clase sin duplicar filas.</td><td>Mantiene un único estado por alumno, materia y fecha.</td></tr>
+<tr><td>Agilizar la toma de asistencia.</td><td>Permite completar una planilla o habilitar un QR para presente/tardanza.</td></tr>
+<tr><td>Conocer la situación de cursada.</td><td>Calcula presentes, ausentes, tardanzas, justificaciones y porcentaje.</td></tr>
+<tr><td>Restringir información.</td><td>Aplica permisos por rol, carrera y materia asignada.</td></tr></table>
+<h2>Qué incluye</h2>
+<ul><li>Inicio y cierre de sesión, registro de alumnos y panel según rol.</li><li>Asignación de alumnos y profesores a materias.</li><li>Planilla diaria, QR, historial, porcentajes y listados imprimibles.</li><li>Administración de alumnos, preceptores, carreras y materias dentro del ámbito habilitado.</li></ul>
+<h2>Qué no incluye</h2>
+<p>No reemplaza al sistema académico completo, no realiza la inscripción formal a una carrera, no valida certificados médicos, no envía sanciones automáticamente y no permite modificar planillas históricas desde la interfaz.</p>
+<div class="warning"><b>Privacidad:</b> no comparta contraseñas, capturas con datos personales ni enlaces QR activos. Cierre siempre la sesión en equipos compartidos.</div>
+
+<div class="page"></div><h1>2. Perfiles de usuario</h1>
+<table><tr><th>Perfil</th><th>Puede realizar</th><th>Límite principal</th></tr>
+<tr><td><b>Alumno</b></td><td>Consultar materias e historial; registrar presente o tardanza mediante QR.</td><td>Solo materias a las que está asignado.</td></tr>
+<tr><td><b>Profesor</b></td><td>Gestionar alumnos de sus materias, tomar asistencia, generar QR, consultar porcentajes e imprimir.</td><td>Solo materias asociadas a su horario.</td></tr>
+<tr><td><b>Preceptor</b></td><td>Administrar alumnos, profesores, materias y asignaciones.</td><td>Solo carreras que le asignó la directora.</td></tr>
+<tr><td><b>Directora de asistencia</b></td><td>Todo lo anterior; crear preceptores y distribuir carreras.</td><td>Debe confirmar la sustitución de responsables.</td></tr></table>
+<p>Se requiere manejo básico de navegador, formularios y, para escanear QR, cámara de teléfono. No se necesitan conocimientos técnicos.</p>
+<img class="shot" src="capturas_actualizadas/User attachment.png" alt="Panel de materias del alumno">
+<div class="caption">Figura 1. Panel de alumno: acceso directo a sus materias y estado general.</div>
+
+<div class="page"></div><h1>3. Requisitos, acceso y registro</h1>
+<h2>3.1 Requisitos</h2>
+<ul><li>Computadora, tableta o teléfono con un navegador actualizado.</li><li>Conexión a la red donde está publicado el sistema; JavaScript y cookies habilitados.</li><li>Cámara y permiso de cámara para leer QR desde el teléfono.</li><li>Impresora o “Guardar como PDF” solo para conservar listados.</li></ul>
+<h2>3.2 Iniciar sesión</h2>
+<ol><li>Abra la dirección institucional y entre en <b>/asistencia</b>.</li><li>Seleccione <b>Iniciar sesión</b>.</li><li>Escriba el DNI —si es alumno— o el correo electrónico y la contraseña.</li><li>Active <b>Recordarme</b> únicamente en un dispositivo personal.</li><li>Presione <b>Entrar</b>.</li></ol>
+<div class="success"><b>Resultado esperado:</b> aparece “Ingresaste correctamente” y se abre el panel del rol.</div>
+<h2>3.3 Crear la primera cuenta</h2>
+<p>Un alumno puede elegir <b>Registrarse</b> y completar nombre, apellido, DNI, CUIL, carrera, correo y una contraseña de por lo menos ocho caracteres. El profesor debe ser validado y asignado por preceptor/directora. El preceptor es creado por la directora junto con una o más carreras.</p>
+<h2>3.4 Cerrar sesión</h2>
+<ol><li>Presione <b>Cerrar sesión</b> en el encabezado.</li><li>Compruebe el aviso “Sesión cerrada”.</li></ol>
+
+<div class="page"></div><h1>4. Interfaz y primeros pasos</h1>
+<table><tr><th>Zona</th><th>Uso</th></tr>
+<tr><td>Encabezado</td><td>Identifica el módulo, el usuario y contiene el cierre de sesión.</td></tr>
+<tr><td>Mensajes</td><td>Verde: acción correcta. Rojo: error o falta de permisos. Amarillo: configuración pendiente.</td></tr>
+<tr><td>Mis materias</td><td>Materias disponibles para alumno o profesor.</td></tr>
+<tr><td>Panel del profesor</td><td>Alumnos, planilla, porcentajes, impresión y QR.</td></tr>
+<tr><td>Panel administrativo</td><td>Alumnos, usuarios, profesores, asignaciones, carreras y materias.</td></tr>
+<tr><td>Filtros</td><td>Reducen la lista visible; no modifican información.</td></tr></table>
+<h2>Primera comprobación recomendada</h2>
+<ul><li><b>Alumno:</b> abra una materia y confirme sus datos.</li><li><b>Profesor:</b> abra una materia y revise “Alumnos de la materia”.</li><li><b>Preceptor:</b> seleccione carrera y compruebe las materias configuradas.</li><li><b>Directora:</b> revise carreras y responsables antes de reasignarlos.</li></ul>
+<img class="shot" src="capturas_actualizadas/profe.png" alt="Panel de materias del profesor">
+<div class="caption">Figura 2. Panel del profesor con las carreras, materias y cantidad de alumnos asignados.</div>
+
+<div class="page"></div><h1>5. Procedimientos del alumno</h1>
+<h2>5.1 Consultar una materia</h2>
+<ol><li>Inicie sesión y ubique <b>Mis materias</b>.</li><li>Presione <b>Ver materia</b>.</li><li>Revise profesor, historial, clases totales, presentes, ausentes, tardanzas, justificaciones y porcentaje.</li></ol>
+<p>La tardanza vale media presencia. La justificación se informa, pero no suma presencia. Cuando existe planilla de una fecha y el alumno no tiene registro, el sistema la muestra como ausencia automática.</p>
+<div class="note">El panel alerta si el porcentaje está por debajo del mínimo: 80 % en prácticas o prácticas profesionalizantes y 70 % en las demás materias.</div>
+<img class="shot" src="capturas_actualizadas/alumno3.png" alt="Detalle de asistencia de una materia del alumno">
+<div class="caption">Figura 3. Resumen e historial visible para el alumno.</div>
+<h2>5.2 Registrar asistencia con QR</h2>
+<ol><li>Inicie sesión como alumno.</li><li>Use <b>Escanear QR</b> y permita la cámara, o abra el enlace desde la cámara del teléfono.</li><li>Enfoque el código que muestra el profesor.</li><li>Compruebe el mensaje de registro como presente o tardanza.</li></ol>
+<div class="warning">El QR debe estar habilitado, pertenecer a la materia asignada y ser del día actual. Si falla, no insista con capturas antiguas: solicite un nuevo código al profesor.</div>
+<img class="shot" src="capturas_actualizadas/alumno2.png" alt="Ventana de escaneo QR del alumno">
+<div class="caption">Figura 4. Ventana de escaneo QR con la cámara habilitada para la materia seleccionada.</div>
+
+<div class="page"></div><h1>6. Procedimientos del profesor</h1>
+<h2>6.1 Agregar o quitar alumnos</h2>
+<ol><li>Abra una materia desde <b>Mis materias</b>.</li><li>Despliegue <b>Sumar alumnos</b> y busque por nombre, apellido, DNI o correo.</li><li>Marque uno o más alumnos y presione <b>Agregar alumnos seleccionados</b>.</li><li>Compruebe que aparezcan en “Alumnos de la materia”.</li><li>Para quitar uno, use <b>Quitar</b> y confirme.</li></ol>
+<p>Quitar elimina la asignación a la materia, no la cuenta general del alumno.</p>
+<img class="shot" src="capturas_actualizadas/profe2.png" alt="Materia y alumnos asignados al profesor">
+<div class="caption">Figura 5. Gestión de una materia, alumnos asignados y accesos a planilla, porcentajes e impresión.</div>
+<h2>6.2 Tomar asistencia diaria</h2>
+<ol><li>Entre en la materia y presione <b>Tomar asistencia diaria</b>.</li><li>Confirme la fecha. Solo hoy puede modificarse.</li><li>Elija para cada alumno: <b>Presente, Ausente, Tarde</b> o <b>Justificado</b>.</li><li>Si es justificado, indique <b>Enfermedad</b> o <b>Trabajo</b>.</li><li>Presione <b>Guardar asistencia del día</b> o <b>Guardar cambios</b>.</li><li>Compruebe la confirmación.</li></ol>
+<img class="shot" src="capturas_actualizadas/profe4.png" alt="Estados y guardado de la planilla diaria">
+<div class="caption">Figura 6. Selección de estados, motivo de justificación y guardado de la asistencia del día.</div>
+
+<div class="page"></div><h1>6. Profesor: planilla, QR y porcentajes</h1>
+<img class="shot" src="capturas_actualizadas/profe3.png" alt="Planilla diaria y código QR">
+<div class="caption">Figura 7. Planilla diaria con el QR habilitado y los controles para generar o inhabilitar el código.</div>
+<h2>6.3 Generar y cerrar un QR</h2>
+<ol><li>Abra la planilla de hoy.</li><li>En “Código QR de asistencia”, elija <b>Presente</b> o <b>Tardanza</b>.</li><li>Presione <b>Generar uno nuevo</b> y muéstrelo a los alumnos.</li><li>Use <b>Inhabilitar</b> al terminar. Puede volver a habilitar el último código del día.</li></ol>
+<p>Cada QR nuevo inhabilita los anteriores de esa materia y fecha. Un segundo escaneo del mismo alumno actualiza el registro único y no crea duplicados.</p>
+<h2>6.4 Consultar una planilla anterior</h2>
+<ol><li>Abra la planilla de la materia.</li><li>Seleccione una fecha habilitada en <b>Fecha de cursada</b>.</li><li>Presione <b>Consultar</b>.</li><li>Revise los estados guardados. Las fechas anteriores son únicamente de lectura.</li></ol>
+<img class="shot" src="capturas_actualizadas/profe5.png" alt="Selector de fecha de una planilla anterior">
+<div class="caption">Figura 8. Selector de fechas para consultar una planilla correspondiente a una clase anterior.</div>
+<h2>6.5 Consultar porcentajes e imprimir</h2>
+<ol><li>Abra <b>Porcentaje de asistencia</b>.</li><li>Escriba un máximo entre 1 y 100 para ver alumnos debajo de ese valor, o use <b>Mostrar todos</b>.</li><li>Seleccione un alumno para ver fechas y estados.</li><li>Use <b>Generar listado imprimible</b> o <b>Imprimir planilla</b>; el navegador permite imprimir o guardar como PDF.</li></ol>
+<img class="shot" src="capturas_actualizadas/profe6.png" alt="Porcentajes de asistencia de los alumnos">
+<div class="caption">Figura 9. Filtro de porcentaje y listado de alumnos que se encuentran por debajo del valor indicado.</div>
+
+<div class="page"></div><h1>7. Procedimientos del preceptor</h1>
+<h2>7.1 Trabajar dentro de una carrera</h2>
+<ol><li>Presione <b>Cambiar carrera</b>.</li><li>Seleccione una de las carreras asignadas.</li><li>Presione <b>Usar esta carrera</b>.</li><li>Compruebe que el nombre de la carrera seleccionada aparezca en el panel.</li></ol>
+<p>Los listados, búsquedas y altas quedan limitados a la carrera activa.</p>
+<img class="shot" src="capturas_actualizadas/prece.png" alt="Selector de carrera del preceptor">
+<div class="caption">Figura 10. Selección de la carrera que administrará el preceptor.</div>
+<h2>7.2 Administrar alumnos</h2>
+<ol><li>Abra <b>ABM de alumnos por carrera</b>.</li><li>Para crear, complete nombre, apellido, DNI, CUIL, correo, carrera y contraseña confirmada.</li><li>Presione <b>Guardar alumno</b>. Se vinculan ficha académica y acceso mediante el DNI.</li><li>Para editar, cambie los campos y use <b>Actualizar alumno</b>; deje la contraseña vacía para conservarla.</li><li>Para eliminar definitivamente, use <b>Eliminar alumno y acceso</b> y confirme.</li></ol>
+<div class="warning"><b>Atención:</b> la eliminación borra asignaciones y asistencias relacionadas. No la utilice para un cambio de materia o carrera.</div>
+<h2>7.3 Validar profesores</h2>
+<ol><li>Busque al profesor pendiente de la carrera.</li><li>Seleccione y presione <b>Validar seleccionados como profesor</b>.</li><li>En profesores validados, abra <b>Materias</b>.</li><li>Seleccione carrera/año, marque materias y guarde.</li></ol>
+<img class="shot" src="capturas_actualizadas/prece2.png" alt="Asignación de materias a un profesor">
+<div class="caption">Figura 11. Selección y guardado de las materias asignadas a un profesor validado.</div>
+
+<div class="page"></div><h1>7. Preceptor: asignaciones y configuración</h1>
+<h2>7.4 Consultar materias configuradas</h2>
+<ol><li>Ubique la sección <b>Materias configuradas</b>.</li><li>Busque por materia, profesor, alumno o carrera.</li><li>Seleccione el año para reducir el listado.</li><li>Revise el profesor y la cantidad de alumnos de cada materia.</li></ol>
+<img class="shot" src="capturas_actualizadas/prece3.png" alt="Materias configuradas de una carrera">
+<div class="caption">Figura 12. Listado de materias configuradas, profesor responsable y cantidad de alumnos.</div>
+<h2>7.5 Asignar alumnos y profesores</h2>
+<ul><li>En <b>Asignar alumno a materia</b>, elija ambos registros y confirme.</li><li>En <b>Materias configuradas</b>, abra la materia o quite asignaciones cuando corresponda.</li><li>La materia solo puede quedar a cargo del profesor configurado en su horario. Revise cualquier aviso de sustitución.</li></ul>
+<h2>7.6 Consultar e imprimir una materia</h2>
+<ol><li>Seleccione el nombre de una materia configurada.</li><li>Revise carrera, año, profesor y cantidad de alumnos.</li><li>Compruebe el listado con presencias, clases y porcentaje.</li><li>Presione <b>Imprimir</b> si necesita una copia en papel o PDF.</li></ol>
+<img class="shot" src="capturas_actualizadas/prece4.png" alt="Detalle imprimible de una materia">
+<div class="caption">Figura 13. Detalle de la materia y listado de alumnos con sus porcentajes de asistencia.</div>
+<h2>7.7 Editar carrera o materia</h2>
+<ol><li>Localice el registro dentro de la carrera habilitada.</li><li>En carreras, modifique nombre/descripcion, años, resolución, carpeta o texto permitido.</li><li>En materias, modifique nombre/descripcion, carrera, año, profesor u orden.</li><li>Guarde y verifique el aviso verde.</li></ol>
+
+<div class="page"></div><h1>8. Procedimientos de la directora</h1>
+<p>La directora de asistencia ve todas las carreras y puede crear preceptores o cambiar sus ámbitos. Las tareas de alumnos, profesores, materias y asignaciones se realizan igual que en el capítulo anterior.</p>
+<h2>8.1 Crear un preceptor</h2>
+<ol><li>Abra la sección de usuarios/preceptores.</li><li>Complete nombre, correo y contraseña.</li><li>Seleccione al menos una carrera.</li><li>Guarde y compruebe que el usuario aparezca en el listado.</li></ol>
+<img class="shot" src="capturas_actualizadas/directora.png" alt="Formulario para crear un preceptor">
+<div class="caption">Figura 14. Formulario de la directora para crear un preceptor y seleccionar las carreras que administrará.</div>
+<h2>8.2 Reasignar carreras</h2>
+<ol><li>Abra <b>Carreras de preceptores</b>.</li><li>Seleccione las carreras del usuario y guarde.</li><li>Si una carrera ya tiene responsable, revise <b>Confirmar cambio de preceptor</b>.</li><li>Elija <b>Sustituir y guardar</b> solo si corresponde; de lo contrario cancele.</li></ol>
+<img class="shot" src="capturas_actualizadas/directora2.png" alt="Asignación de carreras a preceptores">
+<div class="caption">Figura 15. Gestión de las carreras asignadas a cada preceptor.</div>
+
+<div class="page"></div><h1>9. Resolución de problemas</h1>
+<table class="compact"><tr><th>Mensaje o síntoma</th><th>Causa probable</th><th>Qué hacer</th></tr>
+<tr><td>DNI/correo o contraseña incorrectos</td><td>Credencial inválida.</td><td>Revise escritura y solicite restablecimiento al administrador.</td></tr>
+<tr><td>Acceso denegado</td><td>El rol o ámbito no autoriza.</td><td>Vuelva al panel; pida revisar rol/carrera si corresponde.</td></tr>
+<tr><td>No estás asignado a esta materia</td><td>Falta alumno–materia.</td><td>Solicite asignación al profesor o preceptor.</td></tr>
+<tr><td>El profesor no puede acceder</td><td>No figura en el horario.</td><td>El preceptor debe asignarlo.</td></tr>
+<tr><td>La materia no tiene día de cursada</td><td>Horario incompleto.</td><td>Configure el día en Horarios.</td></tr>
+<tr><td>Solo se puede tomar asistencia el día de cursada</td><td>Fecha no habilitada.</td><td>Use la fecha correspondiente.</td></tr>
+<tr><td>Días anteriores: solo lectura</td><td>Se intentó editar historia.</td><td>Eleve la rectificación al responsable técnico.</td></tr>
+<tr><td>Seleccione motivo de justificación</td><td>Falta enfermedad/trabajo.</td><td>Complete el motivo.</td></tr>
+<tr><td>QR inhabilitado o de otra fecha</td><td>Código cerrado/antiguo.</td><td>Pida uno nuevo o habilitado.</td></tr>
+<tr><td>La cámara no abre</td><td>Permiso, navegador o HTTPS.</td><td>Habilite cámara, actualice navegador o use la cámara del teléfono.</td></tr>
+<tr><td>419 Page Expired</td><td>Sesión vencida.</td><td>Recargue, ingrese otra vez y repita.</td></tr>
+<tr><td>Error 500/pantalla vacía</td><td>Falla técnica.</td><td>No repita eliminaciones; registre hora y pantalla y contacte soporte.</td></tr></table>
+<div class="warning">Contacte soporte inmediatamente si ve datos de otra carrera, pérdida de registros, porcentajes incoherentes o sospecha de acceso no autorizado.</div>
+
+<div class="page"></div><h1>10. Preguntas frecuentes</h1>
+<h3>¿Puedo ingresar con DNI?</h3><p>Sí, cuando la cuenta de alumno está vinculada por DNI. Los demás perfiles utilizan normalmente correo.</p>
+<h3>¿Puedo registrar dos veces el mismo QR?</h3><p>El sistema actualiza el único registro de alumno, materia y fecha; no duplica la asistencia.</p>
+<h3>¿Cómo cuenta una tardanza?</h3><p>Como 0,5 presencia. Una justificación queda separada y no suma presencia.</p>
+<h3>¿Por qué hoy no aparece en la planilla?</h3><p>La materia debe tener configurado el día actual y estar asignada al profesor en el horario.</p>
+<h3>¿Puedo corregir una fecha anterior?</h3><p>No desde la interfaz. Debe seguirse el procedimiento institucional y técnico para conservar trazabilidad.</p>
+<h3>¿Qué sucede al generar otro QR?</h3><p>Los QR anteriores de esa materia para hoy quedan inhabilitados.</p>
+<h3>¿Por qué veo otra pantalla que un compañero?</h3><p>Las opciones dependen del rol y de las carreras o materias asignadas.</p>
+<h2>11. Glosario</h2>
+<table class="compact"><tr><th>Término</th><th>Definición</th></tr>
+<tr><td>ABM</td><td>Alta, baja y modificación de datos.</td></tr><tr><td>Asignación</td><td>Vínculo que habilita a una persona en una materia o carrera.</td></tr><tr><td>Planilla diaria</td><td>Estados de asistencia de una materia en una fecha.</td></tr><tr><td>QR</td><td>Código visual con enlace único para registrar presente o tarde.</td></tr><tr><td>Registro</td><td>Ficha académica del alumno, distinta de la cuenta de acceso.</td></tr><tr><td>Rol</td><td>Conjunto de permisos.</td></tr><tr><td>Ausencia automática</td><td>Ausencia mostrada cuando hubo clase pero el alumno no tiene estado individual.</td></tr></table>
+
+<div class="page"></div><h1>12. Soporte y consulta rápida</h1>
+<h2>Cómo pedir ayuda</h2>
+<p>Contacte al administrador institucional del Sistema de Asistencia por el canal definido por el ISFT N.° 38. Informe nombre y rol, carrera, materia, fecha/hora, acción realizada, mensaje exacto, navegador/dispositivo y una captura sin contraseñas ni datos innecesarios.</p>
+<h2>Efecto de cada estado</h2>
+<table><tr><th>Estado</th><th>Valor de presencia</th><th>Dato adicional</th></tr><tr><td>Presente</td><td>1</td><td>—</td></tr><tr><td>Tarde</td><td>0,5</td><td>—</td></tr><tr><td>Ausente</td><td>0</td><td>—</td></tr><tr><td>Justificado</td><td>0</td><td>Enfermedad o trabajo</td></tr></table>
+<h2>Flujo rápido</h2>
+<ul><li><b>Alumno:</b> Ingresar → Mis materias → Escanear QR / Ver materia.</li><li><b>Profesor:</b> Ingresar → Materia → Tomar asistencia → Guardar → Cerrar QR.</li><li><b>Preceptor:</b> Ingresar → Elegir carrera → Administrar alumnos/profesores/materias.</li><li><b>Directora:</b> Ingresar → Usuarios → Crear preceptor → Asignar carreras.</li></ul>
+<h2>Lista de comprobación</h2>
+<ul><li>Cierre sesión en equipos compartidos.</li><li>No comparta contraseñas ni capturas de QR.</li><li>Verifique materia, fecha y tipo antes de generar el QR.</li><li>Revise el mensaje de confirmación después de guardar.</li><li>Imprima o exporte solo la información necesaria.</li></ul>
+<p class="small">Fin del Manual de Usuario — versión 2.0.</p>
+</body></html>

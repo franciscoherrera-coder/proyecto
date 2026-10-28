@@ -5,6 +5,7 @@
     .alumnos-lista { max-height: 500px; }
     .alumno-fila { cursor: pointer; font-size: .9rem; line-height: 1.2; min-height: 42px; padding: 6px 12px !important; }
     .alumno-fila:hover { background: #f8f9fa; }
+    .alumno-asignado-fila { cursor: default; }
     .alumno-fila .form-check-input { flex: 0 0 auto; height: 1rem; margin: 0; width: 1rem; }
     .alumno-detalle { color: #6c757d; font-size: .82rem; white-space: nowrap; }
     .alumno-fila .d-block { display: inline !important; font-size: .82rem; margin-left: 8px; white-space: nowrap; }
@@ -112,11 +113,11 @@
 
                     <div class="alumnos-lista border rounded overflow-auto">
                         @forelse ($alumnosAsignados as $alumno)
-                            <div class="alumno-fila d-flex align-items-center gap-2 border-bottom">
-                                <a class="flex-grow-1 text-decoration-none text-dark" href="{{ route('asistencia.profesor.alumno.perfil', $alumno) }}">
+                            <div class="alumno-fila alumno-asignado-fila d-flex align-items-center gap-2 border-bottom">
+                                <div class="flex-grow-1 text-dark">
                                     <strong>{{ $alumno->apellido }}, {{ $alumno->nombre }}</strong>
                                     <span class="d-block small text-muted">DNI {{ $alumno->dni }} · {{ $alumno->email }}</span>
-                                </a>
+                                </div>
                                 <form action="{{ route('asistencia.profesor.materia.alumno.quitar', [$materia, $alumno]) }}" method="POST" class="m-0 js-quitar-alumno" data-tiene-asistencias="{{ $alumnosConAsistencia->contains($alumno->id) ? '1' : '0' }}">
                                     @csrf
                                     @method('DELETE')

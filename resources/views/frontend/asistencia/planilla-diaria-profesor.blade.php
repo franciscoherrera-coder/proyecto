@@ -140,7 +140,7 @@
                                         <td><strong>{{ $alumno->apellido }}, {{ $alumno->nombre }}</strong></td>
                                         <td>{{ $alumno->dni }}</td>
                                         <td>
-                                            @php($estadoSeleccionado = old("asistencias.{$alumno->id}.estado", $asistencia->estado ?? 'presente'))
+                                            @php($estadoSeleccionado = old("asistencias.{$alumno->id}.estado", $asistencia->estado ?? 'ausente'))
                                             @php($motivoSeleccionado = old("asistencias.{$alumno->id}.motivo_justificacion", $asistencia->motivo_justificacion ?? ''))
                                             <span class="solo-impresion">
                                                 {{ ucfirst($estadoSeleccionado) }}@if($estadoSeleccionado === 'justificado' && $motivoSeleccionado) ({{ ucfirst($motivoSeleccionado) }})@endif
